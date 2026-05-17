@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
 import { Icon } from '../components/ui/Icon';
 import { USER_AVATAR } from '../data/opportunities';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context';
 
 export function ProfilePage() {
   const navigate = useNavigate();

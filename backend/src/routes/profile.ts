@@ -4,6 +4,7 @@ import {
   analyzeProfileWithAgent,
   CursorAgentError,
 } from '../services/cursorAgent.js';
+import { fetchGitHubProfileSummary } from '../services/github.js';
 import { extractResumeText } from '../services/resumeParser.js';
 import { createSession, type ProfileInput } from '../store/session.js';
 
@@ -62,12 +63,37 @@ profileRouter.post(
         return;
       }
 
-      const insights = await analyzeProfileWithAgent(profile);
+      const hasSignal =
+        profile.github.length > 0 ||
+        profile.linkedin.length > 0 ||
+        (resumeUploaded && Boolean(req.file));
+
+      if (!hasSignal) {
+        res.status(400).json({
+          message:
+            'Provide at least a GitHub URL, LinkedIn URL, or resume so the agent can search opportunities for this candidate.',
+          code: 'VALIDATION',
+        });
+        return;
+      }
+
+      console.log(`[analyze] start name=${name}`);
+      const githubSummary = profile.github
+        ? await fetchGitHubProfileSummary(profile.github)
+        : undefined;
+
+      const insights = await analyzeProfileWithAgent({
+        ...profile,
+        githubSummary,
+      });
+      console.log(
+        `[analyze] done opportunities=${insights.opportunities.length}`,
+      );
       const sessionId = `sess_${Date.now()}`;
 
       createSession({
         sessionId,
-        profile,
+        profile: { ...profile, githubSummary },
         skillTags: insights.skillTags,
         aiStrengths: insights.aiStrengths,
         rolesScanned: insights.rolesScanned,

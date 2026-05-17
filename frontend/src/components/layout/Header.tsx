@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { USER_AVATAR } from '../../data/opportunities';
 import { getApiMode } from '../../api';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../context';
 import { Icon } from '../ui/Icon';
 
 interface HeaderProps {

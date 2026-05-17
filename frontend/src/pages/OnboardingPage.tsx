@@ -6,7 +6,7 @@ import { OnboardingMobileBar } from '../components/onboarding/OnboardingMobileBa
 import { ApiStatusBanner } from '../components/ui/ApiStatusBanner';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Icon } from '../components/ui/Icon';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context';
 
 const TRUST_FEATURES = [
   {
@@ -48,7 +48,9 @@ export function OnboardingPage() {
 
   const hasName = profile.name.trim().length > 0;
   const hasProfileSource =
-    profile.resumeUploaded || profile.github.trim().length > 0;
+    profile.resumeUploaded ||
+    profile.github.trim().length > 0 ||
+    profile.linkedin.trim().length > 0;
   const canAnalyze = hasName && hasProfileSource;
 
   const attachFile = useCallback(
@@ -101,9 +103,8 @@ export function OnboardingPage() {
             .
           </h1>
           <p className="mx-auto max-w-2xl text-sm text-on-surface-variant sm:text-base md:text-lg">
-            Your autonomous career agent is ready. Upload your profile and let
-            our neural engine map your skills to the world&apos;s most exclusive
-            opportunities.
+            Works for any candidate. Upload a CV plus GitHub or LinkedIn — the
+            Cursor agent searches real matched roles for that person.
           </p>
         </section>
 
@@ -181,7 +182,7 @@ export function OnboardingPage() {
                     />
                     <input
                       type="text"
-                      placeholder="Alex Chen"
+                      placeholder="Your full name"
                       value={profile.name}
                       onChange={(e) => setProfile({ name: e.target.value })}
                       className="w-full rounded-lg border-none bg-black/40 py-3 pl-12 pr-4 text-base text-on-surface placeholder:text-on-surface-variant/30 focus:ring-0"

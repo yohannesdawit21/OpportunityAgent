@@ -1,6 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { RequireAnalysis } from './components/routes/RequireAnalysis';
-import { AppProvider } from './context/AppContext';
+import { AppProvider } from './context';
 import { DashboardPage } from './pages/DashboardPage';
 import { LeadsPage } from './pages/LeadsPage';
 import { NetworkPage } from './pages/NetworkPage';

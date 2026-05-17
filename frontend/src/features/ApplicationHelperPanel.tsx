@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context';
 import { Icon } from '../components/ui/Icon';
 import type { RoadmapStep } from '../types';
 

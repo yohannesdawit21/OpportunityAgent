@@ -268,18 +268,23 @@ export async function analyzeProfileWithAgent(
     return seedFallback(profile.name);
   }
 
-  const enriched = await buildEnrichedContext({
-    ...profile,
-    githubSummary: profile.github
-      ? await fetchGitHubProfileSummary(profile.github)
-      : undefined,
-  });
+  const githubSummary = profile.github
+    ? await fetchGitHubProfileSummary(profile.github)
+    : undefined;
+  const profileWithContext: ProfileInput = { ...profile, githubSummary };
+  const enriched = await buildEnrichedContext(profileWithContext);
 
-  const prompt = `You are OpportunityAgent — an autonomous career scout powered by deep profile analysis.
+  const prompt = `You are OpportunityAgent — an autonomous career scout. You work for ANY candidate worldwide (any name, country, seniority, or field).
 
-TASK: Using ONLY the candidate data below (CV/resume text, GitHub repos, LinkedIn URL context), perform a realistic global opportunity search. Propose 4 to 6 specific job opportunities that match this person's actual skills, seniority, and interests. Use real or highly plausible companies and role titles (startups, tech firms, remote-friendly teams, internships, or fellowships as appropriate).
+TASK: Using ONLY the candidate data below (CV/resume text, GitHub repos, LinkedIn URL context), infer their level (student, intern, junior, mid, senior, career-switcher) and search for 4 to 6 realistic opportunities that fit THEM specifically.
 
-Do NOT reuse generic placeholder companies like "Lumina Systems" or "Nebula Cloud" unless they genuinely fit this candidate.
+Rules:
+- Personalize every rationale to THIS candidate's repos, skills, employers, and education — never generic filler.
+- Include a mix relevant to their level: internships, fellowships, hackathons, remote roles, or full-time as appropriate.
+- Use real or highly plausible employers (global startups, NGOs, tech companies, open-source programs, etc.).
+- Match locations to their profile when known; otherwise prefer remote-friendly roles.
+- Do NOT copy demo placeholders (Lumina Systems, Nebula Cloud, NeuralFlow AI, Metaverse Systems) unless they truly fit.
+- Cover letters must use the candidate's actual name: ${profile.name}
 
 Candidate data:
 ${enriched}
@@ -344,16 +349,19 @@ Respond with ONLY valid JSON (no markdown outside JSON) in exactly this shape:
 }
 
 export async function generateCoverLetterWithAgent(
-  profile: Pick<ProfileInput, 'name' | 'github' | 'linkedin'>,
+  profile: Pick<
+    ProfileInput,
+    'name' | 'github' | 'linkedin' | 'resumeText' | 'githubSummary'
+  >,
   opportunity: Opportunity,
 ): Promise<string> {
   if (useFallback()) {
     return opportunity.coverLetter;
   }
 
-  const githubSummary = profile.github
-    ? await fetchGitHubProfileSummary(profile.github)
-    : '';
+  const githubSummary =
+    profile.githubSummary ??
+    (profile.github ? await fetchGitHubProfileSummary(profile.github) : '');
 
   const prompt = `Write a professional cover letter (under 220 words) for this job application. Reference specific details from the candidate's background. Sign off as ${profile.name}.
 
@@ -362,6 +370,7 @@ Name: ${profile.name}
 GitHub: ${profile.github || 'n/a'}
 ${githubSummary ? `GitHub context:\n${githubSummary}` : ''}
 LinkedIn: ${profile.linkedin || 'n/a'}
+${profile.resumeText ? `Resume excerpt:\n${profile.resumeText.slice(0, 2500)}` : ''}
 
 Role: ${opportunity.title} at ${opportunity.company} (${opportunity.location})
 Match rationale: ${opportunity.rationale}

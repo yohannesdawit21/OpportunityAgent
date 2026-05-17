@@ -7,7 +7,12 @@ export {
 } from './opportunityAgentApi';
 export { ApiError } from './types';
 export { checkApiHealth } from './health';
-export { getApiMode, useMockApi } from './client';
+export {
+  getApiMode,
+  getApiSessionId,
+  setApiSessionId,
+  useMockApi,
+} from './client';
 export type { ApiHealthResponse } from './health';
 export type {
   AnalyzeProfileRequest,

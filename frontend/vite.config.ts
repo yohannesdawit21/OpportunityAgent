@@ -7,8 +7,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://127.0.0.1:3001',
         changeOrigin: true,
+        // Cursor agent analyze can take 30–120s
+        timeout: 180_000,
+        proxyTimeout: 180_000,
       },
     },
   },

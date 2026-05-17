@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Icon } from '../components/ui/Icon';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context';
 import type { ScanStep } from '../types';
 
 const INITIAL_STEPS: ScanStep[] = [

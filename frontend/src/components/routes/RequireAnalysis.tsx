@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../context';
 
 interface RequireAnalysisProps {
   children: React.ReactNode;

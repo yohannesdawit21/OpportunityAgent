@@ -1,5 +1,5 @@
 import type { Opportunity } from '../../types';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../context';
 import { Icon } from '../ui/Icon';
 import { MatchRing } from '../ui/MatchRing';
 

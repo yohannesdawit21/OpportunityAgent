@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../context';
 import { ApplicationHelperPanel } from '../../features/ApplicationHelperPanel';
 import { Icon } from '../ui/Icon';
 import { BottomNav } from './BottomNav';

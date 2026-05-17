@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -13,6 +11,7 @@ import {
   generateCoverLetter,
   getOpportunities,
   saveApplicationDraft,
+  setApiSessionId,
   submitApplication,
   useMockApi,
 } from '../api';
@@ -31,53 +30,9 @@ import type {
   PersistedAppState,
   UserProfile,
 } from '../types';
-
-interface AppContextValue {
-  profile: UserProfile;
-  setProfile: (patch: Partial<UserProfile>) => void;
-  resumeFile: File | null;
-  setResumeFile: (file: File | null) => void;
-  opportunities: Opportunity[];
-  skillTags: string[];
-  aiStrengths: string[];
-  rolesScanned: number;
-  analysisStatus: AnalysisStatus;
-  sessionId?: string;
-  analysisError: string | null;
-  clearAnalysisError: () => void;
-  startAnalysis: () => Promise<void>;
-  selectedOpportunity: Opportunity | null;
-  openApplication: (opportunity: Opportunity) => void;
-  closeApplication: () => void;
-  activeFilter: OpportunityType;
-  setActiveFilter: (filter: OpportunityType) => void;
-  regenerateCoverLetter: () => Promise<string | null>;
-  saveDraft: (coverLetter: string) => Promise<void>;
-  submitApplicationForRole: (coverLetter: string) => Promise<void>;
-  applicationBusy: boolean;
-  applicationMessage: string | null;
-  clearApplicationMessage: () => void;
-  resetApp: () => void;
-  loadDemoForScreen: (
-    screen:
-      | 'onboarding'
-      | 'scanning'
-      | 'dashboard'
-      | 'leads'
-      | 'network'
-      | 'profile'
-      | 'application',
-  ) => void;
-  demoFastScan: boolean;
-  completeDemoScan: () => void;
-  apiMode: 'mock' | 'live';
-  backendConnected: boolean | null;
-  clearStoredData: () => void;
-}
+import { AppContext } from './app-context';
 
 const STORAGE_KEY = 'app-state';
-
-const AppContext = createContext<AppContextValue | null>(null);
 
 function loadPersisted(): PersistedAppState {
   return loadJson<PersistedAppState>(STORAGE_KEY, {
@@ -93,6 +48,20 @@ function initialOpportunities(persisted: PersistedAppState): Opportunity[] {
   return [];
 }
 
+function analysisErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.status === 0 || err.message === 'Failed to fetch') {
+      return 'Cannot reach the backend. Run npm run dev:backend and keep it open during analysis (up to 2 minutes).';
+    }
+    return err.message;
+  }
+  if (err instanceof TypeError && err.message.includes('fetch')) {
+    return 'Connection lost during analysis. Ensure the backend is still running and try again.';
+  }
+  if (err instanceof Error) return err.message;
+  return 'Analysis failed. Please try again.';
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const persisted = loadPersisted();
   const apiMode: 'mock' | 'live' = useMockApi() ? 'mock' : 'live';
@@ -102,9 +71,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>(() =>
     initialOpportunities(persisted),
   );
-  const [backendConnected, setBackendConnected] = useState<boolean | null>(
-    apiMode === 'mock' ? null : null,
-  );
+  const [backendConnected, setBackendConnected] = useState<boolean | null>(null);
   const [skillTags, setSkillTags] = useState<string[]>(
     persisted.skillTags ?? SKILL_TAGS,
   );
@@ -117,6 +84,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState(persisted.sessionId);
+
+  useEffect(() => {
+    if (!useMockApi() && persisted.sessionId) {
+      setApiSessionId(persisted.sessionId);
+    }
+  }, []);
 
   const [selectedOpportunity, setSelectedOpportunity] =
     useState<Opportunity | null>(null);
@@ -169,10 +142,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const health = await checkApiHealth();
         if (!cancelled) setBackendConnected(health.ok);
 
-        if (
-          analysisStatus === 'complete' &&
-          opportunities.length === 0
-        ) {
+        if (analysisStatus === 'complete' && opportunities.length === 0) {
           const list = await getOpportunities();
           if (!cancelled && list.length > 0) setOpportunities(list);
         }
@@ -211,19 +181,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
           resumeFile: resumeFile ?? undefined,
         });
         setSessionId(result.sessionId);
+        setApiSessionId(result.sessionId);
         setSkillTags(result.skillTags);
         setAiStrengths(result.aiStrengths);
         setRolesScanned(result.rolesScanned);
         setOpportunities(result.opportunities);
         setAnalysisStatus('complete');
       } catch (err) {
-        const message =
-          err instanceof ApiError
-            ? err.message
-            : err instanceof Error
-              ? err.message
-              : 'Analysis failed. Please try again.';
-        setAnalysisError(message);
+        setAnalysisError(analysisErrorMessage(err));
         setAnalysisStatus('error');
         analysisPromiseRef.current = null;
         throw err;
@@ -258,9 +223,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           o.id === selectedOpportunity.id ? { ...o, coverLetter } : o,
         ),
       );
-      setSelectedOpportunity((o) =>
-        o ? { ...o, coverLetter } : o,
-      );
+      setSelectedOpportunity((o) => (o ? { ...o, coverLetter } : o));
       return coverLetter;
     } catch (err) {
       setApplicationMessage(
@@ -338,6 +301,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAnalysisError(null);
     analysisPromiseRef.current = null;
     setSessionId(undefined);
+    setApiSessionId(undefined);
     setSelectedOpportunity(null);
     setApplicationMessage(null);
     setDemoFastScan(false);
@@ -373,10 +337,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const demoProfile: UserProfile = {
         ...DEFAULT_PROFILE,
+        name: 'Demo User',
         resumeUploaded: true,
         resumeFileName: 'demo-resume.pdf',
-        github: 'github.com/alexchen',
-        linkedin: 'linkedin.com/in/alexchen',
+        github: 'https://github.com/octocat',
+        linkedin: '',
       };
       setProfileState(demoProfile);
       setSkillTags(SKILL_TAGS);
@@ -474,10 +439,4 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
-}
-
-export function useApp() {
-  const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useApp must be used within AppProvider');
-  return ctx;
 }

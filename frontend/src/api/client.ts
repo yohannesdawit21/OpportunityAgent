@@ -2,6 +2,16 @@ import { ApiError, type ApiErrorBody } from './types';
 
 const baseUrl = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '');
 
+let activeSessionId: string | undefined;
+
+export function setApiSessionId(sessionId: string | undefined): void {
+  activeSessionId = sessionId;
+}
+
+export function getApiSessionId(): string | undefined {
+  return activeSessionId;
+}
+
 export function useMockApi(): boolean {
   return import.meta.env.VITE_USE_MOCK_API !== 'false';
 }
@@ -17,6 +27,10 @@ export async function apiRequest<T>(
   const headers = new Headers(options.headers);
   if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
+  }
+
+  if (!useMockApi() && activeSessionId) {
+    headers.set('X-Session-Id', activeSessionId);
   }
 
   const response = await fetch(`${baseUrl}${path}`, {

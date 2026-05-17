@@ -17,7 +17,7 @@ app.use(
       'http://localhost:4173',
     ],
     methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Id'],
   }),
 );
 
@@ -57,7 +57,7 @@ app.use(
   },
 );
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`OpportunityAgent API listening on http://localhost:${port}/api`);
   console.log(
     `Cursor agent: ${
@@ -67,3 +67,8 @@ app.listen(port, () => {
     }`,
   );
 });
+
+// Long-running Cursor SDK analyze requests
+server.timeout = 180_000;
+server.keepAliveTimeout = 120_000;
+server.headersTimeout = 125_000;

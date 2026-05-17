@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Icon } from '../ui/Icon';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../context';
 
 const navItems = [
   { icon: 'dashboard', label: 'Dashboard', path: '/dashboard' },

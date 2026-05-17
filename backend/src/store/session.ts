@@ -34,6 +34,10 @@ const sessions = new Map<string, AnalysisSession>();
 const drafts = new Map<string, ApplicationDraft>();
 const submissions = new Map<string, SubmittedApplication>();
 
+function draftKey(sessionId: string, opportunityId: string): string {
+  return `${sessionId}::${opportunityId}`;
+}
+
 let latestSessionId: string | null = null;
 
 export function createSession(
@@ -58,6 +62,7 @@ export function getLatestSession(): AnalysisSession | undefined {
 }
 
 export function saveDraft(
+  sessionId: string,
   opportunityId: string,
   coverLetter: string,
 ): ApplicationDraft {
@@ -65,15 +70,19 @@ export function saveDraft(
     coverLetter,
     savedAt: new Date().toISOString(),
   };
-  drafts.set(opportunityId, draft);
+  drafts.set(draftKey(sessionId, opportunityId), draft);
   return draft;
 }
 
-export function getDraft(opportunityId: string): ApplicationDraft | undefined {
-  return drafts.get(opportunityId);
+export function getDraft(
+  sessionId: string,
+  opportunityId: string,
+): ApplicationDraft | undefined {
+  return drafts.get(draftKey(sessionId, opportunityId));
 }
 
 export function submitApplication(
+  sessionId: string,
   opportunityId: string,
   coverLetter: string,
 ): SubmittedApplication {
@@ -81,6 +90,6 @@ export function submitApplication(
     coverLetter,
     submittedAt: new Date().toISOString(),
   };
-  submissions.set(opportunityId, submission);
+  submissions.set(draftKey(sessionId, opportunityId), submission);
   return submission;
 }
