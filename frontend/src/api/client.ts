@@ -18,8 +18,9 @@ export function getApiSessionId(): string | undefined {
   return activeSessionId;
 }
 
+/** Only true when explicitly enabled — unset env must not enable mock in production builds. */
 export function useMockApi(): boolean {
-  return import.meta.env.VITE_USE_MOCK_API !== 'false';
+  return import.meta.env.VITE_USE_MOCK_API === 'true';
 }
 
 export function getApiMode(): 'mock' | 'live' {

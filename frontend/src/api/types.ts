@@ -11,6 +11,8 @@ export interface AnalyzeProfileResponse {
   aiStrengths: string[];
   rolesScanned: number;
   opportunities: Opportunity[];
+  /** `agent` = Cursor SDK; `fallback` = static seed (dev only) */
+  source?: 'agent' | 'fallback';
 }
 
 export interface ScanProgressEvent {

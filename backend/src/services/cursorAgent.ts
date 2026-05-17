@@ -10,8 +10,14 @@ import { fetchGitHubProfileSummary } from './github.js';
 import type { ProfileInput } from '../store/session.js';
 
 const apiKey = () => process.env.CURSOR_API_KEY?.trim();
-const useFallback = () =>
-  process.env.USE_AGENT_FALLBACK === 'true' || !apiKey();
+const useFallback = () => process.env.USE_AGENT_FALLBACK === 'true';
+
+export function assertAgentConfigured(): void {
+  if (apiKey() || useFallback()) return;
+  throw new Error(
+    'CURSOR_API_KEY is not set on the server. Add it in Vercel → Settings → Environment Variables, then redeploy.',
+  );
+}
 
 const OPPORTUNITY_TYPES: OpportunityType[] = [
   'all',
@@ -262,9 +268,13 @@ function seedFallback(name: string): ProfileInsights & { opportunities: Opportun
 
 export async function analyzeProfileWithAgent(
   profile: ProfileInput,
-): Promise<ProfileInsights & { opportunities: Opportunity[] }> {
+): Promise<
+  ProfileInsights & { opportunities: Opportunity[]; source: 'agent' | 'fallback' }
+> {
+  assertAgentConfigured();
+
   if (useFallback()) {
-    return seedFallback(profile.name);
+    return { ...seedFallback(profile.name), source: 'fallback' };
   }
 
   const githubSummary = profile.github
@@ -340,10 +350,16 @@ Respond with ONLY valid JSON (no markdown outside JSON) in exactly this shape:
           ? Math.round(parsed.rolesScanned)
           : 800 + opportunities.length * 120,
       opportunities,
+      source: 'agent',
     };
   } catch (err) {
     console.warn('[cursor-agent] full analyze failed:', err);
-    return seedFallback(profile.name);
+    if (useFallback()) {
+      return { ...seedFallback(profile.name), source: 'fallback' };
+    }
+    throw err instanceof Error
+      ? err
+      : new Error('Cursor agent analysis failed');
   }
 }
 

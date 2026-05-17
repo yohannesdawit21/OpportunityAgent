@@ -10,6 +10,9 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   define: {
     'import.meta.env.VITE_API_URL': JSON.stringify(apiUrl),
+    'import.meta.env.VITE_USE_MOCK_API': JSON.stringify(
+      process.env.VITE_USE_MOCK_API ?? 'false',
+    ),
   },
   server: {
     proxy: {

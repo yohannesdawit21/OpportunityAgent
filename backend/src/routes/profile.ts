@@ -103,6 +103,7 @@ profileRouter.post(
         aiStrengths: insights.aiStrengths,
         rolesScanned: insights.rolesScanned,
         opportunities: insights.opportunities,
+        source: insights.source,
       });
     } catch (err) {
       if (err instanceof Error && err.message === 'INVALID_FILE_TYPE') {
@@ -120,7 +121,9 @@ profileRouter.post(
       ) {
         res.status(503).json({
           message: err.message || 'AI agent unavailable',
-          code: 'AGENT_STARTUP_FAILED',
+          code: err.message.includes('CURSOR_API_KEY')
+            ? 'AGENT_NOT_CONFIGURED'
+            : 'AGENT_STARTUP_FAILED',
         });
         return;
       }

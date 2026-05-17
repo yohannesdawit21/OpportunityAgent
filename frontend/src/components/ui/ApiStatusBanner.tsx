@@ -21,19 +21,27 @@ function Banner({
 export function ApiStatusBanner() {
   const mode = getApiMode();
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
+  const [agentReady, setAgentReady] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (mode === 'mock') {
       setBackendOk(null);
+      setAgentReady(null);
       return;
     }
     let cancelled = false;
     void checkApiHealth()
       .then((h) => {
-        if (!cancelled) setBackendOk(h.ok);
+        if (!cancelled) {
+          setBackendOk(h.ok);
+          setAgentReady(h.agent ?? false);
+        }
       })
       .catch(() => {
-        if (!cancelled) setBackendOk(false);
+        if (!cancelled) {
+          setBackendOk(false);
+          setAgentReady(false);
+        }
       });
     return () => {
       cancelled = true;
@@ -50,7 +58,7 @@ export function ApiStatusBanner() {
         <span>
           <strong className="font-semibold">Mock API</strong> — set{' '}
           <code className="rounded bg-black/30 px-1">VITE_USE_MOCK_API=false</code>{' '}
-          and run the backend for live data.
+          for production.
         </span>
       </Banner>
     );
@@ -77,25 +85,26 @@ export function ApiStatusBanner() {
         <Icon name="error" className="text-red-400" />
         <span>
           <strong className="font-semibold">Backend offline.</strong>{' '}
-          {import.meta.env.PROD ? (
-            <>
-              API not reachable. In Vercel: Framework preset <strong>Services</strong>, set{' '}
-              <code className="rounded bg-black/30 px-1">CURSOR_API_KEY</code> and{' '}
-              <code className="rounded bg-black/30 px-1">VITE_API_URL=/api</code>, then redeploy.
-              Test{' '}
-              <a
-                href="/api/health"
-                className="underline"
-                target="_blank"
-                rel="noreferrer"
-              >
-                /api/health
-              </a>
-              .
-            </>
-          ) : (
-            'Run npm run dev:backend in the backend/ folder.'
-          )}
+          {import.meta.env.PROD
+            ? 'Check that Vercel Framework preset is “Services” and open /api/health on your URL.'
+            : 'Run npm run dev:backend in the backend/ folder.'}
+        </span>
+      </Banner>
+    );
+  }
+
+  if (agentReady === false) {
+    return (
+      <Banner
+        className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-100"
+        role="alert"
+      >
+        <Icon name="warning" className="text-amber-400" />
+        <span>
+          <strong className="font-semibold">CURSOR_API_KEY missing on Vercel.</strong>{' '}
+          Add it under Project → Settings → Environment Variables (Production), redeploy,
+          then run Analyze Profile again. Without it you only get demo job cards
+          (Lumina, Nebula, etc.).
         </span>
       </Banner>
     );
@@ -108,8 +117,7 @@ export function ApiStatusBanner() {
     >
       <Icon name="cloud_done" className="text-tertiary" />
       <span>
-        <strong className="font-semibold">Live API</strong> — connected to Express
-        + Cursor Agent SDK
+        <strong className="font-semibold">Live API</strong> — Cursor agent connected
       </span>
     </Banner>
   );

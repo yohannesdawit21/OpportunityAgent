@@ -19,11 +19,13 @@
 1. **Framework preset:** **Services** (not Vite / Other).
 2. **Environment variables:**
 
-| Name | Value |
-|------|--------|
-| `CURSOR_API_KEY` | Your key |
-| `VITE_USE_MOCK_API` | `false` |
-| `VITE_API_URL` | `/api` |
+| Name | Value | Required |
+|------|--------|----------|
+| `CURSOR_API_KEY` | Your Cursor API key | **Yes** — without this you get demo jobs (Lumina, Nebula…) |
+| `VITE_USE_MOCK_API` | `false` | **Yes** — must be exactly `false`, not empty |
+| `VITE_API_URL` | `/api` | Yes |
+
+Apply to **Production** and **Preview**. Redeploy after adding variables.
 
 3. Redeploy after changing env vars (rebuild frontend).
 

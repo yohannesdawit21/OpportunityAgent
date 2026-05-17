@@ -17,6 +17,7 @@ import {
 } from '../api';
 import { ApiError } from '../api/types';
 import { DEFAULT_PROFILE } from '../data/opportunities';
+import { isSeedOpportunityList } from '../lib/seedDetection';
 import { loadJson, remove, saveJson } from '../lib/storage';
 import type {
   AnalysisStatus,
@@ -60,11 +61,15 @@ function loadPersisted(): PersistedAppState {
   return raw;
 }
 
-function initialOpportunities(persisted: PersistedAppState): Opportunity[] {
-  if (persisted.opportunities?.length) {
-    return persisted.opportunities.map((o) => ({ ...o }));
+function initialOpportunities(
+  persisted: PersistedAppState,
+  liveApi: boolean,
+): Opportunity[] {
+  if (!persisted.opportunities?.length) return [];
+  if (liveApi && isSeedOpportunityList(persisted.opportunities)) {
+    return [];
   }
-  return [];
+  return persisted.opportunities.map((o) => ({ ...o }));
 }
 
 function analysisErrorMessage(err: unknown): string {
@@ -82,14 +87,16 @@ function analysisErrorMessage(err: unknown): string {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const liveApi = !useMockApi();
   const persisted = loadPersisted();
-  const apiMode: 'mock' | 'live' = useMockApi() ? 'mock' : 'live';
+  const apiMode: 'mock' | 'live' = liveApi ? 'live' : 'mock';
 
   const [profile, setProfileState] = useState<UserProfile>(persisted.profile);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [opportunities, setOpportunities] = useState<Opportunity[]>(() =>
-    initialOpportunities(persisted),
+    initialOpportunities(persisted, liveApi),
   );
+  const [agentReady, setAgentReady] = useState<boolean | null>(null);
   const [backendConnected, setBackendConnected] = useState<boolean | null>(null);
   const [skillTags, setSkillTags] = useState<string[]>(
     persisted.skillTags ?? [],
@@ -158,7 +165,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const { checkApiHealth } = await import('../api');
         const health = await checkApiHealth();
-        if (!cancelled) setBackendConnected(health.ok);
+        if (!cancelled) {
+          setBackendConnected(health.ok);
+          setAgentReady(health.agent ?? false);
+        }
 
         if (analysisStatus === 'complete' && opportunities.length === 0) {
           const list = await getOpportunities();
@@ -203,6 +213,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSkillTags(result.skillTags);
         setAiStrengths(result.aiStrengths);
         setRolesScanned(result.rolesScanned);
+        if (
+          liveApi &&
+          (result.source === 'fallback' || isSeedOpportunityList(result.opportunities))
+        ) {
+          throw new Error(
+            'Server returned demo job data. Add CURSOR_API_KEY in Vercel → Environment Variables (Production), redeploy, then analyze again.',
+          );
+        }
         setOpportunities(result.opportunities);
         setAnalysisStatus('complete');
       } catch (err) {
@@ -217,7 +235,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     analysisPromiseRef.current = run();
     return analysisPromiseRef.current;
-  }, [profile, resumeFile]);
+  }, [profile, resumeFile, liveApi]);
 
   const openApplication = useCallback((opportunity: Opportunity) => {
     setSelectedOpportunity(opportunity);
@@ -360,6 +378,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       resetApp,
       apiMode,
       backendConnected,
+      agentReady,
       clearStoredData,
     }),
     [
@@ -388,6 +407,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       resetApp,
       apiMode,
       backendConnected,
+      agentReady,
       clearStoredData,
     ],
   );

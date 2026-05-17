@@ -34,6 +34,7 @@ export interface AppContextValue {
   resetApp: () => void;
   apiMode: 'mock' | 'live';
   backendConnected: boolean | null;
+  agentReady: boolean | null;
   clearStoredData: () => void;
 }
 
