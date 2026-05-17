@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-card {
+            background: rgba(9, 9, 11, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .glowing-border:focus-within {
+            border-color: transparent;
+            background-image: linear-gradient(#000, #000), linear-gradient(to right, #b4c5ff, #ddb7ff);
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+        }
+        .aura-purple {
+            background: radial-gradient(circle at center, rgba(221, 183, 255, 0.05) 0%, transparent 70%);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary-fixed": "#f0dbff",
+                      "on-primary": "#002a78",
+                      "on-secondary": "#490080",
+                      "inverse-surface": "#e5e1e4",
+                      "surface-container-lowest": "#0e0e10",
+                      "on-secondary-container": "#d6a9ff",
+                      "tertiary": "#4edea3",
+                      "surface-container-low": "#1c1b1d",
+                      "inverse-on-surface": "#313032",
+                      "outline": "#8d90a0",
+                      "on-error-container": "#ffdad6",
+                      "on-secondary-fixed-variant": "#6900b3",
+                      "on-tertiary-container": "#bdffdb",
+                      "secondary-container": "#6f00be",
+                      "secondary-fixed-dim": "#ddb7ff",
+                      "on-background": "#e5e1e4",
+                      "secondary": "#ddb7ff",
+                      "on-tertiary-fixed": "#002113",
+                      "on-tertiary-fixed-variant": "#005236",
+                      "primary-fixed-dim": "#b4c5ff",
+                      "surface-container": "#201f22",
+                      "tertiary-container": "#007d55",
+                      "background": "#131315",
+                      "inverse-primary": "#0053db",
+                      "on-error": "#690005",
+                      "error": "#ffb4ab",
+                      "surface-dim": "#131315",
+                      "surface-variant": "#353437",
+                      "surface-container-highest": "#353437",
+                      "surface-container-high": "#2a2a2c",
+                      "on-secondary-fixed": "#2c0051",
+                      "primary": "#b4c5ff",
+                      "primary-container": "#2563eb",
+                      "surface-tint": "#b4c5ff",
+                      "on-surface-variant": "#c3c6d7",
+                      "tertiary-fixed": "#6ffbbe",
+                      "surface-bright": "#39393b",
+                      "on-surface": "#e5e1e4",
+                      "on-primary-container": "#eeefff",
+                      "outline-variant": "#434655",
+                      "on-tertiary": "#003824",
+                      "primary-fixed": "#dbe1ff",
+                      "on-primary-fixed": "#00174b",
+                      "surface": "#131315",
+                      "on-primary-fixed-variant": "#003ea8",
+                      "error-container": "#93000a",
+                      "tertiary-fixed-dim": "#4edea3"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "container-max": "1280px",
+                      "section-gap": "80px",
+                      "stack-lg": "32px",
+                      "stack-sm": "8px",
+                      "stack-md": "16px",
+                      "margin-mobile": "16px",
+                      "gutter": "24px"
+              },
+              "fontFamily": {
+                      "label-sm": ["Geist"],
+                      "body-lg": ["Inter"],
+                      "headline-lg": ["Geist"],
+                      "label-md": ["Geist"],
+                      "headline-md": ["Geist"],
+                      "headline-xl": ["Geist"],
+                      "headline-lg-mobile": ["Geist"],
+                      "body-md": ["Inter"]
+              },
+              "fontSize": {
+                      "label-sm": ["12px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                      "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "label-md": ["14px", {"lineHeight": "1.4", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                      "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                      "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "700"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-white/10 shadow-[0_0_20px_rgba(180,197,255,0.05)] h-16 flex justify-between items-center px-margin-mobile md:px-gutter">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="smart_toy">smart_toy</span>
+<h1 class="text-headline-md font-headline-md font-bold text-primary tracking-tight">OpportunityAgent</h1>
+</div>
+<div class="flex items-center gap-4">
+<nav class="hidden md:flex gap-6">
+<a class="text-primary font-label-md text-label-md" href="#">Dashboard</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" href="#">Applications</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" href="#">Network</a>
+</nav>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden border border-white/10">
+<img alt="User avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDytNpPBqwcHdmj4-XjPG55EoNJffiVDTu72dzTClCo0O46VHubEgNp51JXPn74iaYDW9bet-Xki1XXhkIUMchk_282I93fMX_fGmqf5jrDGNItpuQbjjTsVmsj0aB21d4L0tw9-j1RYsTSM56mpzA0cK86rYqmxJIqIp8ubFRI58Trd6TNF2TK6HsoZw77UHI8016GPaO1aNEqEpQmcap4s9RxeQDirbOSmrGI4hV-YUNuAiI4CcLdd0IPqjRBSw1t9ITu3WsLZSc"/>
+</div>
+</div>
+</header>
+<!-- Main Content Area (Background Dashboard Simulation) -->
+<main class="pt-24 pb-20 px-margin-mobile md:px-gutter max-w-container-max mx-auto">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-stack-lg">
+<!-- Mock Dashboard Content -->
+<div class="lg:col-span-2 space-y-stack-lg opacity-40">
+<div class="glass-panel p-stack-lg rounded-xl">
+<h2 class="text-headline-md font-headline-md mb-4">Current Opportunities</h2>
+<div class="space-y-4">
+<div class="glass-card p-4 rounded-lg flex justify-between items-center">
+<div>
+<p class="text-primary font-bold">Senior Product Designer</p>
+<p class="text-on-surface-variant text-label-md">Metaverse Systems</p>
+</div>
+<div class="px-3 py-1 rounded-full border border-tertiary text-tertiary text-label-sm">92% Match</div>
+</div>
+<div class="glass-card p-4 rounded-lg flex justify-between items-center">
+<div>
+<p class="text-on-surface font-bold">Lead React Developer</p>
+<p class="text-on-surface-variant text-label-md">NeuralFlow AI</p>
+</div>
+<div class="px-3 py-1 rounded-full border border-secondary text-secondary text-label-sm">84% Match</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Slide-out Panel Overlay -->
+<div class="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex justify-end">
+<!-- Panel -->
+<aside class="w-full max-w-xl bg-surface/60 backdrop-blur-2xl border-l border-white/10 h-full flex flex-col shadow-2xl">
+<!-- Header -->
+<div class="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+<div>
+<h2 class="text-headline-md font-headline-md text-primary">Application Helper</h2>
+<p class="text-on-surface-variant text-label-md">Lead React Developer @ NeuralFlow AI</p>
+</div>
+<button class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="close">close</span>
+</button>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto p-6 space-y-stack-lg aura-purple">
+<!-- Match Score & Missing Skills -->
+<section class="glass-card p-stack-md rounded-xl border-secondary/20">
+<div class="flex items-center gap-3 mb-stack-md">
+<div class="w-12 h-12 rounded-full border-2 border-secondary flex items-center justify-center">
+<span class="text-headline-sm font-bold text-secondary">84%</span>
+</div>
+<h3 class="text-label-md font-bold uppercase tracking-widest text-on-surface">Match Analysis</h3>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-lg border border-white/5">
+<p class="text-body-md text-on-surface-variant mb-3">
+                            To reach a <span class="text-tertiary font-bold">99% match</span>, you should learn:
+                        </p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1.5 rounded-full bg-secondary/10 border border-secondary/30 text-secondary text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="add_circle">add_circle</span>
+                                GraphQL Federation
+                            </span>
+<span class="px-3 py-1.5 rounded-full bg-secondary/10 border border-secondary/30 text-secondary text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="add_circle">add_circle</span>
+                                AWS Serverless
+                            </span>
+</div>
+</div>
+</section>
+<!-- AI Cover Letter Area -->
+<section class="space-y-3">
+<div class="flex justify-between items-center">
+<h3 class="text-label-md font-bold uppercase tracking-widest text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="auto_awesome">auto_awesome</span>
+                            AI Cover Letter Draft
+                        </h3>
+<button class="text-primary text-label-sm hover:underline">Regenerate</button>
+</div>
+<div class="relative glowing-border rounded-xl">
+<textarea class="w-full h-64 bg-black/40 border border-white/10 rounded-xl p-4 text-body-md text-on-surface focus:ring-0 focus:outline-none resize-none leading-relaxed" spellcheck="false">Dear Hiring Team at NeuralFlow AI,
+
+I am writing to express my strong interest in the Lead React Developer position. Having spent the last 5 years scaling enterprise-grade React applications, I am particularly drawn to NeuralFlow's commitment to low-latency AI interfaces.
+
+My background in optimizing complex state management systems and mentoring high-performing engineering teams aligns perfectly with the goals of this role. I am excited about the possibility of bringing my technical expertise to your mission.
+
+Best regards,
+Alex Chen</textarea>
+</div>
+</section>
+<!-- Action Plan / Roadmap -->
+<section class="space-y-4">
+<h3 class="text-label-md font-bold uppercase tracking-widest text-on-surface-variant">Strategic Roadmap</h3>
+<div class="relative pl-8 space-y-8 before:content-[''] before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary before:to-surface-variant">
+<!-- Step 1 -->
+<div class="relative">
+<div class="absolute -left-10 w-6 h-6 rounded-full bg-primary flex items-center justify-center border-4 border-background z-10">
+<span class="material-symbols-outlined text-[14px] text-on-primary font-bold" data-icon="check" style="font-variation-settings: 'FILL' 0, 'wght' 700;">check</span>
+</div>
+<div>
+<p class="text-on-surface font-bold">Research Company Culture</p>
+<p class="text-on-surface-variant text-label-sm">Focus on their recent Series B announcement and AI safety blog post.</p>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="relative">
+<div class="absolute -left-10 w-6 h-6 rounded-full bg-surface-container-highest border-2 border-primary flex items-center justify-center z-10">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+</div>
+<div>
+<p class="text-primary font-bold">Polish React Portfolio</p>
+<p class="text-on-surface-variant text-label-sm">Highlight the "Dashboard v3" project with its Framer Motion integrations.</p>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="relative opacity-60">
+<div class="absolute -left-10 w-6 h-6 rounded-full bg-surface-container-highest border-2 border-white/20 flex items-center justify-center z-10">
+</div>
+<div>
+<p class="text-on-surface font-bold">Submit Application</p>
+<p class="text-on-surface-variant text-label-sm">Finalize through the Greenhouse portal with personalized tags.</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Footer Actions -->
+<div class="p-6 border-t border-white/5 bg-background/80 flex gap-4">
+<button class="flex-1 py-3 px-6 rounded-xl border border-white/10 hover:bg-white/5 transition-all text-label-md font-bold text-on-surface">
+                    Save Draft
+                </button>
+<button class="flex-1 py-3 px-6 rounded-xl bg-gradient-to-r from-primary-container to-secondary-container hover:opacity-90 transition-all text-on-primary-container text-label-md font-bold shadow-lg shadow-primary-container/20">
+                    Submit Application
+                </button>
+</div>
+</aside>
+</div>
+<!-- Navigation Components (Shell) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 pb-safe px-4 bg-background/40 backdrop-blur-2xl border-t border-white/10 lg:hidden">
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="text-label-sm font-label-sm">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-primary font-bold">
+<span class="material-symbols-outlined" data-icon="bolt">bolt</span>
+<span class="text-label-sm font-label-sm">Leads</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="text-label-sm font-label-sm">Network</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="text-label-sm font-label-sm">Profile</span>
+</div>
+</nav>
+</body></html>

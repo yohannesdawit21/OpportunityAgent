@@ -1,0 +1,11 @@
+{
+  "name": "virtual-hackaton",
+  "private": true,
+  "version": "0.1.0",
+  "description": "OpportunityAgent hackathon monorepo",
+  "scripts": {
+    "dev": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "preview": "npm run preview --prefix frontend"
+  }
+}
