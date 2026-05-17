@@ -39,7 +39,6 @@ export function OnboardingPage() {
     analysisStatus,
     analysisError,
     clearAnalysisError,
-    loadDemoForScreen,
   } = useApp();
   const canUseApp = analysisStatus === 'complete';
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -264,44 +263,6 @@ export function OnboardingPage() {
           </div>
         </div>
 
-        <section className="glass-card mb-8 rounded-xl border border-secondary/20 bg-secondary-container/5 p-4 md:mb-12 md:p-8">
-          <p className="mb-1 text-center text-sm font-medium text-secondary">
-            Jump to any screen (demo)
-          </p>
-          <p className="mb-4 text-center text-xs text-on-surface-variant md:mb-6">
-            Skips the backend — uses built-in demo data only. For judges: use{' '}
-            <strong className="text-on-surface">Analyze Profile</strong> above
-            with the live API banner green.
-          </p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {(
-              [
-                { screen: 'scanning' as const, label: 'AI Scanning', path: '/scanning' },
-                { screen: 'dashboard' as const, label: 'Matches', path: '/dashboard' },
-                { screen: 'leads' as const, label: 'Leads', path: '/leads' },
-                { screen: 'network' as const, label: 'Network', path: '/network' },
-                { screen: 'profile' as const, label: 'Profile', path: '/profile' },
-                {
-                  screen: 'application' as const,
-                  label: 'Apply Helper',
-                  path: '/dashboard',
-                },
-              ] as const
-            ).map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => {
-                  loadDemoForScreen(item.screen);
-                  navigate(item.path);
-                }}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-xs font-semibold text-on-surface transition-all hover:border-primary/30 hover:text-primary sm:text-sm"
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </section>
 
         <div className="mt-6 grid grid-cols-1 gap-4 md:mt-8 md:grid-cols-3 md:gap-6">
           {TRUST_FEATURES.map((f) => (

@@ -1,35 +1,33 @@
 # OpportunityAgent — Frontend
 
-React 19 + TypeScript + Vite 6 + Tailwind CSS v4 + React Router v7.
+React UI for the hackathon project. **Start at the repo root:** [../README.md](../README.md) for full setup. **Architecture:** [../SYSTEM.md](../SYSTEM.md).
 
 ## Scripts
 
 ```bash
 npm install
 npm run dev      # http://localhost:5173
-npm run build    # output: dist/
-npm run preview  # serve production build
+npm run build    # dist/
+npm run preview
 ```
 
-## Environment
+## Environment (`.env`)
 
-Copy `.env.example` to `.env`:
+| Variable | Default in `.env.example` |
+|----------|---------------------------|
+| `VITE_API_URL` | `/api` (proxied to backend) |
+| `VITE_USE_MOCK_API` | `false` for submission |
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VITE_API_URL` | `http://localhost:3001/api` | Backend base URL |
-| `VITE_USE_MOCK_API` | `true` | Use in-browser mock API |
-
-## Structure
+## Source layout
 
 ```
 src/
-  api/           HTTP client + mock handlers
-  components/    layout, UI, routes
-  context/       App state + persistence
-  data/          mock opportunities
-  features/      Application helper panel
-  pages/         route screens
+  pages/           Route screens
+  components/      Layout, guards, UI
+  context/         AppProvider + hooks
+  api/             Client, mock, health
+  features/        Application helper panel
+  data/            Seed jobs (mock/demo only)
 ```
 
-See `../BACKEND.md` for the API contract.
+API contract: [../BACKEND.md](../BACKEND.md).

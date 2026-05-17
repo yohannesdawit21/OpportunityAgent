@@ -42,16 +42,16 @@ export function ScanningPage() {
     analysisError,
     clearAnalysisError,
     startAnalysis,
-    demoFastScan,
-    completeDemoScan,
+    skillTags,
+    rolesScanned,
   } = useApp();
   const [steps, setSteps] = useState(INITIAL_STEPS);
   const [githubProgress, setGithubProgress] = useState(0);
 
   useEffect(() => {
-    if (demoFastScan || analysisStatus !== 'running') return;
+    if (analysisStatus !== 'running') return;
     void startAnalysis().catch(() => undefined);
-  }, [analysisStatus, startAnalysis, demoFastScan]);
+  }, [analysisStatus, startAnalysis]);
 
   useEffect(() => {
     if (analysisStatus !== 'complete') return;
@@ -60,19 +60,11 @@ export function ScanningPage() {
   }, [analysisStatus, navigate]);
 
   useEffect(() => {
-    const step = demoFastScan ? 20 : 8;
-    const ms = demoFastScan ? 120 : 400;
     const interval = setInterval(() => {
-      setGithubProgress((p) => (p >= 100 ? 100 : p + step));
-    }, ms);
+      setGithubProgress((p) => (p >= 100 ? 100 : p + 8));
+    }, 400);
     return () => clearInterval(interval);
-  }, [demoFastScan]);
-
-  useEffect(() => {
-    if (!demoFastScan) return;
-    const t = setTimeout(completeDemoScan, 2500);
-    return () => clearTimeout(t);
-  }, [demoFastScan, completeDemoScan]);
+  }, []);
 
   useEffect(() => {
     if (githubProgress < 100) return;
@@ -111,6 +103,8 @@ export function ScanningPage() {
 
     return () => timers.forEach(clearTimeout);
   }, [githubProgress]);
+
+  const strengthCount = skillTags.length > 0 ? skillTags.length : '—';
 
   return (
     <div className="overflow-hidden bg-background">
@@ -240,8 +234,10 @@ export function ScanningPage() {
                 <Icon name="analytics" />
               </div>
               <div>
-                <p className="text-xs text-on-surface-variant">Identified Patterns</p>
-                <p className="text-lg font-semibold text-on-surface">14 Key Strengths</p>
+                <p className="text-xs text-on-surface-variant">Skills detected</p>
+                <p className="text-lg font-semibold text-on-surface">
+                  {strengthCount} key strengths
+                </p>
               </div>
             </div>
             <div className="glass-panel flex items-center gap-4 rounded-xl p-4">
@@ -249,8 +245,12 @@ export function ScanningPage() {
                 <Icon name="travel_explore" />
               </div>
               <div>
-                <p className="text-xs text-on-surface-variant">Market Potential</p>
-                <p className="text-lg font-semibold text-on-surface">92nd Percentile</p>
+                <p className="text-xs text-on-surface-variant">Roles scanned</p>
+                <p className="text-lg font-semibold text-on-surface">
+                  {rolesScanned > 0
+                    ? rolesScanned.toLocaleString()
+                    : 'Searching…'}
+                </p>
               </div>
             </div>
           </div>

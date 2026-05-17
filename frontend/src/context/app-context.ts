@@ -32,18 +32,6 @@ export interface AppContextValue {
   applicationMessage: string | null;
   clearApplicationMessage: () => void;
   resetApp: () => void;
-  loadDemoForScreen: (
-    screen:
-      | 'onboarding'
-      | 'scanning'
-      | 'dashboard'
-      | 'leads'
-      | 'network'
-      | 'profile'
-      | 'application',
-  ) => void;
-  demoFastScan: boolean;
-  completeDemoScan: () => void;
   apiMode: 'mock' | 'live';
   backendConnected: boolean | null;
   clearStoredData: () => void;

@@ -1,6 +1,8 @@
 # Final submission checklist — OpportunityAgent
 
-## Architecture
+> **Setup:** [README.md](./README.md) · **How it works:** [SYSTEM.md](./SYSTEM.md)
+
+## Architecture (short)
 
 - **Frontend** (`frontend/`) — React + Vite, calls REST API
 - **Backend** (`backend/`) — Express on port 3001, Cursor Agent SDK for AI
@@ -31,7 +33,7 @@ Open http://localhost:5173/
 3. Enter name + GitHub URL → **Analyze Profile** (do **not** use “Jump to any screen” demo buttons).
 4. After scan (~30–90s), dashboard shows **new companies/roles** tailored to the candidate (not Lumina/Nebula seed cards unless agent fallback ran).
 5. Skills and rationales reference the candidate’s **GitHub repos** and **CV text**.
-5. Profile page shows **Live backend** and a `sess_…` session id.
+6. Profile page shows **Live backend** and a `sess_…` session id.
 
 ## Environment
 

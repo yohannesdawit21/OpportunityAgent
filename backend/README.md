@@ -2,6 +2,8 @@
 
 Express API on port **3001**. Uses `@cursor/sdk` for profile analysis and cover letters.
 
+**Project docs:** [../README.md](../README.md) · [../SYSTEM.md](../SYSTEM.md) · [../BACKEND.md](../BACKEND.md)
+
 ## Setup
 
 ```bash

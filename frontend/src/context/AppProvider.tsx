@@ -16,12 +16,7 @@ import {
   useMockApi,
 } from '../api';
 import { ApiError } from '../api/types';
-import {
-  AI_STRENGTHS,
-  DEFAULT_PROFILE,
-  SKILL_TAGS,
-  opportunities as seedOpportunities,
-} from '../data/opportunities';
+import { DEFAULT_PROFILE } from '../data/opportunities';
 import { loadJson, remove, saveJson } from '../lib/storage';
 import type {
   AnalysisStatus,
@@ -73,10 +68,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const [backendConnected, setBackendConnected] = useState<boolean | null>(null);
   const [skillTags, setSkillTags] = useState<string[]>(
-    persisted.skillTags ?? SKILL_TAGS,
+    persisted.skillTags ?? [],
   );
   const [aiStrengths, setAiStrengths] = useState<string[]>(
-    persisted.aiStrengths ?? AI_STRENGTHS,
+    persisted.aiStrengths ?? [],
   );
   const [rolesScanned, setRolesScanned] = useState(persisted.rolesScanned ?? 0);
   const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>(
@@ -99,7 +94,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     null,
   );
   const analysisPromiseRef = useRef<Promise<void> | null>(null);
-  const [demoFastScan, setDemoFastScan] = useState(false);
 
   useEffect(() => {
     const state: PersistedAppState = {
@@ -294,8 +288,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setProfileState(DEFAULT_PROFILE);
     setResumeFile(null);
     setOpportunities([]);
-    setSkillTags(SKILL_TAGS);
-    setAiStrengths(AI_STRENGTHS);
+    setSkillTags([]);
+    setAiStrengths([]);
     setRolesScanned(0);
     setAnalysisStatus('idle');
     setAnalysisError(null);
@@ -304,72 +298,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setApiSessionId(undefined);
     setSelectedOpportunity(null);
     setApplicationMessage(null);
-    setDemoFastScan(false);
   }, [clearStoredData]);
-
-  const completeDemoScan = useCallback(() => {
-    setOpportunities(seedOpportunities.map((o) => ({ ...o })));
-    setSkillTags(SKILL_TAGS);
-    setAiStrengths(AI_STRENGTHS);
-    setRolesScanned(1240);
-    setAnalysisStatus('complete');
-    setDemoFastScan(false);
-  }, []);
-
-  const loadDemoForScreen = useCallback(
-    (
-      screen:
-        | 'onboarding'
-        | 'scanning'
-        | 'dashboard'
-        | 'leads'
-        | 'network'
-        | 'profile'
-        | 'application',
-    ) => {
-      setAnalysisError(null);
-      analysisPromiseRef.current = null;
-
-      if (screen === 'onboarding') {
-        resetApp();
-        return;
-      }
-
-      const demoProfile: UserProfile = {
-        ...DEFAULT_PROFILE,
-        name: 'Demo User',
-        resumeUploaded: true,
-        resumeFileName: 'demo-resume.pdf',
-        github: 'https://github.com/octocat',
-        linkedin: '',
-      };
-      setProfileState(demoProfile);
-      setSkillTags(SKILL_TAGS);
-      setAiStrengths(AI_STRENGTHS);
-      setRolesScanned(1240);
-      setOpportunities(seedOpportunities.map((o) => ({ ...o })));
-
-      if (screen === 'scanning') {
-        setDemoFastScan(true);
-        setSelectedOpportunity(null);
-        setAnalysisStatus('running');
-        return;
-      }
-
-      setDemoFastScan(false);
-      setAnalysisStatus('complete');
-
-      if (screen === 'application') {
-        const target =
-          seedOpportunities.find((o) => o.id === 'neuralflow-lead-react') ??
-          seedOpportunities[0];
-        setSelectedOpportunity({ ...target });
-      } else {
-        setSelectedOpportunity(null);
-      }
-    },
-    [resetApp],
-  );
 
   const value = useMemo(
     () => ({
@@ -398,9 +327,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       applicationMessage,
       clearApplicationMessage,
       resetApp,
-      loadDemoForScreen,
-      demoFastScan,
-      completeDemoScan,
       apiMode,
       backendConnected,
       clearStoredData,
@@ -429,9 +355,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       applicationMessage,
       clearApplicationMessage,
       resetApp,
-      loadDemoForScreen,
-      demoFastScan,
-      completeDemoScan,
       apiMode,
       backendConnected,
       clearStoredData,
