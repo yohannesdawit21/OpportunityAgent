@@ -17,7 +17,10 @@ import {
 } from '../api';
 import { ApiError } from '../api/types';
 import { DEFAULT_PROFILE } from '../data/opportunities';
-import { isSeedOpportunityList } from '../lib/seedDetection';
+import {
+  hasSeedOpportunities,
+  isSeedOpportunityList,
+} from '../lib/seedDetection';
 import { loadJson, remove, saveJson } from '../lib/storage';
 import type {
   AnalysisStatus,
@@ -41,6 +44,7 @@ function isDemoProfile(profile: UserProfile): boolean {
 }
 
 function loadPersisted(): PersistedAppState {
+  const liveApi = !useMockApi();
   const raw = loadJson<PersistedAppState>(STORAGE_KEY, {
     profile: DEFAULT_PROFILE,
     analysisStatus: 'idle',
@@ -58,6 +62,18 @@ function loadPersisted(): PersistedAppState {
     };
   }
 
+  if (
+    liveApi &&
+    raw.analysisStatus === 'complete' &&
+    raw.opportunities?.length &&
+    hasSeedOpportunities(raw.opportunities)
+  ) {
+    return {
+      profile: raw.profile ?? DEFAULT_PROFILE,
+      analysisStatus: 'idle',
+    };
+  }
+
   return raw;
 }
 
@@ -66,10 +82,25 @@ function initialOpportunities(
   liveApi: boolean,
 ): Opportunity[] {
   if (!persisted.opportunities?.length) return [];
-  if (liveApi && isSeedOpportunityList(persisted.opportunities)) {
+  if (liveApi && hasSeedOpportunities(persisted.opportunities)) {
     return [];
   }
   return persisted.opportunities.map((o) => ({ ...o }));
+}
+
+function shouldInvalidatePersistedAnalysis(
+  liveApi: boolean,
+  analysisStatus: AnalysisStatus,
+  opportunities: Opportunity[],
+  agentConfigured: boolean,
+): boolean {
+  if (!liveApi || agentConfigured) return false;
+  if (analysisStatus !== 'complete') return false;
+  return (
+    opportunities.length === 0 ||
+    hasSeedOpportunities(opportunities) ||
+    isSeedOpportunityList(opportunities)
+  );
 }
 
 function analysisErrorMessage(err: unknown): string {
@@ -167,7 +198,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const health = await checkApiHealth();
         if (!cancelled) {
           setBackendConnected(health.ok);
-          setAgentReady(health.agent ?? false);
+          const agent = health.agent ?? false;
+          setAgentReady(agent);
+
+          if (
+            shouldInvalidatePersistedAnalysis(
+              liveApi,
+              analysisStatus,
+              opportunities,
+              agent,
+            )
+          ) {
+            setAnalysisStatus('idle');
+            setOpportunities([]);
+            setSkillTags([]);
+            setAiStrengths([]);
+            setRolesScanned(0);
+            setSessionId(undefined);
+            setApiSessionId(undefined);
+          }
         }
 
         if (analysisStatus === 'complete' && opportunities.length === 0) {

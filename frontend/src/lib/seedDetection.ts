@@ -6,6 +6,11 @@ export const SEED_OPPORTUNITY_IDS = new Set([
   'metaverse-designer',
 ]);
 
+export function hasSeedOpportunities(opportunities: { id: string }[]): boolean {
+  return opportunities.some((o) => SEED_OPPORTUNITY_IDS.has(o.id));
+}
+
+/** True when every card is a known demo placeholder (full seed response). */
 export function isSeedOpportunityList(
   opportunities: { id: string }[],
 ): boolean {

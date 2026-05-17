@@ -49,6 +49,8 @@ If you get **HTML**, the API service is not running — check Framework preset *
 
 **Required:** add `CURSOR_API_KEY` in Vercel → Settings → Environment Variables (Production).
 
+If the app works on **localhost** but Vercel shows **Lumina / Nebula** demo cards, production is missing the key (`/api/health` → `"agent": false`). The key in `backend/.env` is never uploaded to Vercel — add it in the dashboard or run `npm run vercel:sync-env` after `npx vercel login`, then redeploy.
+
 ## Local dev
 
 ```bash
