@@ -1,8 +1,5 @@
 import cors from 'cors';
-import express from 'express';
-import { applicationsRouter } from './routes/applications.js';
-import { opportunitiesRouter } from './routes/opportunities.js';
-import { profileRouter } from './routes/profile.js';
+import express, { type Router } from 'express';
 
 function corsOrigin(
   origin: string | undefined,
@@ -51,9 +48,56 @@ apiApp.get('/health', (_req, res) => {
   });
 });
 
-apiApp.use('/profile', profileRouter);
-apiApp.use('/opportunities', opportunitiesRouter);
-apiApp.use('/applications', applicationsRouter);
+/** Lazy-load routers so /health works even if a heavy dependency fails at import time. */
+function lazyRouter(
+  loader: () => Promise<{ default?: Router } | Router>,
+): express.RequestHandler {
+  let router: Router | null = null;
+  let loadError: Error | null = null;
+
+  return (req, res, next) => {
+    if (router) {
+      router(req, res, next);
+      return;
+    }
+    if (loadError) {
+      next(loadError);
+      return;
+    }
+    void loader()
+      .then((mod) => {
+        const r =
+          mod && typeof mod === 'object' && 'default' in mod && mod.default
+            ? mod.default
+            : (mod as Router);
+        router = r;
+        router(req, res, next);
+      })
+      .catch((err: Error) => {
+        loadError = err;
+        next(err);
+      });
+  };
+}
+
+apiApp.use(
+  '/profile',
+  lazyRouter(() =>
+    import('./routes/profile.js').then((m) => m.profileRouter),
+  ),
+);
+apiApp.use(
+  '/opportunities',
+  lazyRouter(() =>
+    import('./routes/opportunities.js').then((m) => m.opportunitiesRouter),
+  ),
+);
+apiApp.use(
+  '/applications',
+  lazyRouter(() =>
+    import('./routes/applications.js').then((m) => m.applicationsRouter),
+  ),
+);
 
 apiApp.use(
   (

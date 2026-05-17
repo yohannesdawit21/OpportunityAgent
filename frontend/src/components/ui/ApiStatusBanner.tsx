@@ -77,9 +77,25 @@ export function ApiStatusBanner() {
         <Icon name="error" className="text-red-400" />
         <span>
           <strong className="font-semibold">Backend offline.</strong>{' '}
-          {import.meta.env.PROD
-            ? 'Redeploy with Framework preset “Services” and VITE_API_URL=/api. Check /api/health on your domain.'
-            : 'Run npm run dev:backend in the backend/ folder.'}
+          {import.meta.env.PROD ? (
+            <>
+              API not reachable. In Vercel: Framework preset <strong>Services</strong>, set{' '}
+              <code className="rounded bg-black/30 px-1">CURSOR_API_KEY</code> and{' '}
+              <code className="rounded bg-black/30 px-1">VITE_API_URL=/api</code>, then redeploy.
+              Test{' '}
+              <a
+                href="/api/health"
+                className="underline"
+                target="_blank"
+                rel="noreferrer"
+              >
+                /api/health
+              </a>
+              .
+            </>
+          ) : (
+            'Run npm run dev:backend in the backend/ folder.'
+          )}
         </span>
       </Banner>
     );

@@ -1,5 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
   "experimentalServices": {
     "frontend": {
       "entrypoint": "frontend",
@@ -10,6 +12,7 @@
       "entrypoint": "backend",
       "routePrefix": "/api",
       "framework": "express",
+      "buildCommand": "npm run build",
       "memory": 1024,
       "maxDuration": 300
     }

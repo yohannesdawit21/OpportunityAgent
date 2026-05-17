@@ -35,7 +35,11 @@ curl https://YOUR-APP.vercel.app/api/health
 
 Expected: `{"ok":true,"agent":true,...}`
 
-If you get HTML, the API service is not running — check Framework preset **Services**.
+If you get **500** or `FUNCTION_INVOCATION_FAILED`, the backend did not build: ensure root **buildCommand** runs `npm run build` and redeploy.
+
+If you get **HTML**, the API service is not running — check Framework preset **Services**.
+
+**Required:** add `CURSOR_API_KEY` in Vercel → Settings → Environment Variables (Production).
 
 ## Local dev
 
