@@ -30,6 +30,12 @@ virtual hackaton/
 
 ---
 
+## Deploy to Vercel
+
+See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for one-click deploy steps, environment variables, and notes on function timeouts.
+
+---
+
 ## Quick start
 
 ### Option A — Full stack (recommended for demo / submission)

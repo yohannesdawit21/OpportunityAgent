@@ -22,6 +22,11 @@ export interface ScanProgressEvent {
 export interface GenerateCoverLetterRequest {
   opportunityId: string;
   profile: Pick<UserProfile, 'name' | 'github' | 'linkedin'>;
+  /** Sent on serverless so cover letters work without server session */
+  opportunity?: Pick<
+    Opportunity,
+    'id' | 'title' | 'company' | 'location' | 'rationale'
+  >;
 }
 
 export interface GenerateCoverLetterResponse {

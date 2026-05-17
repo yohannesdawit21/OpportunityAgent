@@ -211,6 +211,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const { coverLetter } = await generateCoverLetter({
         opportunityId: selectedOpportunity.id,
         profile,
+        opportunity: {
+          id: selectedOpportunity.id,
+          title: selectedOpportunity.title,
+          company: selectedOpportunity.company,
+          location: selectedOpportunity.location,
+          rationale: selectedOpportunity.rationale,
+        },
       });
       setOpportunities((prev) =>
         prev.map((o) =>

@@ -51,7 +51,10 @@ export async function generateCoverLetter(
     `/opportunities/${request.opportunityId}/cover-letter`,
     {
       method: 'POST',
-      body: JSON.stringify({ profile: request.profile }),
+      body: JSON.stringify({
+        profile: request.profile,
+        opportunity: request.opportunity,
+      }),
     },
   );
 }

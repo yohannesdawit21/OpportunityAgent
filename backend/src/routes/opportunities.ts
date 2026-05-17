@@ -24,7 +24,32 @@ opportunitiesRouter.post('/:id/cover-letter', async (req, res, next) => {
       return;
     }
 
-    const opportunity = session.opportunities.find((o) => o.id === req.params.id);
+    const bodyOpp = req.body?.opportunity as
+      | {
+          id: string;
+          title: string;
+          company: string;
+          location: string;
+          rationale: string;
+        }
+      | undefined;
+
+    const opportunity =
+      session.opportunities.find((o) => o.id === req.params.id) ??
+      (bodyOpp?.id === req.params.id && bodyOpp.title && bodyOpp.company
+        ? {
+            id: bodyOpp.id,
+            title: bodyOpp.title,
+            company: bodyOpp.company,
+            location: bodyOpp.location ?? 'Remote',
+            matchScore: 80,
+            rationale: bodyOpp.rationale ?? '',
+            logoUrl: '',
+            types: ['all' as const],
+            coverLetter: '',
+            roadmap: [],
+          }
+        : undefined);
 
     if (!opportunity) {
       res.status(404).json({ message: 'Opportunity not found', code: 'NOT_FOUND' });

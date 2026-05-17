@@ -1,0 +1,7 @@
+.git
+.cursor
+**/node_modules/.cache
+frontend/node_modules
+backend/node_modules
+**/*.md
+!README.md
