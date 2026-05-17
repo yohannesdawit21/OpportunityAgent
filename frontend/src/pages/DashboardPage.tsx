@@ -95,7 +95,10 @@ export function DashboardPage() {
           </article>
         </section>
 
-        <div className="no-scrollbar mb-6 flex items-center gap-4 overflow-x-auto pb-2">
+        <div
+          id="matches"
+          className="no-scrollbar mb-6 flex scroll-mt-28 items-center gap-4 overflow-x-auto pb-2"
+        >
           {FILTERS.map((f) => (
             <button
               key={f.id}
@@ -112,7 +115,24 @@ export function DashboardPage() {
           ))}
         </div>
 
-        {filtered.length === 0 ? (
+        {opportunities.length === 0 ? (
+          <div className="glass-card rounded-xl p-12 text-center">
+            <Icon
+              name="rocket_launch"
+              className="mb-4 text-5xl text-on-surface-variant"
+            />
+            <p className="text-lg font-medium text-on-surface">No matches yet</p>
+            <p className="mt-2 text-sm text-on-surface-variant">
+              Complete onboarding and run Analyze Profile to discover roles.
+            </p>
+            <Link
+              to="/"
+              className="mt-6 inline-flex rounded-lg bg-primary px-6 py-2 text-sm font-medium text-on-primary"
+            >
+              Go to onboarding
+            </Link>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="glass-card rounded-xl p-12 text-center">
             <Icon
               name="search_off"

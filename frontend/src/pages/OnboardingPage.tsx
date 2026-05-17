@@ -167,6 +167,24 @@ export function OnboardingPage() {
               <div className="space-y-4">
                 <label className="block space-y-2">
                   <span className="text-sm font-medium text-on-surface-variant">
+                    Full name
+                  </span>
+                  <div className="glowing-border relative rounded-lg border border-white/10 transition-all">
+                    <Icon
+                      name="person"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Alex Chen"
+                      value={profile.name}
+                      onChange={(e) => setProfile({ name: e.target.value })}
+                      className="w-full rounded-lg border-none bg-black/40 py-3 pl-12 pr-4 text-base text-on-surface placeholder:text-on-surface-variant/30 focus:ring-0"
+                    />
+                  </div>
+                </label>
+                <label className="block space-y-2">
+                  <span className="text-sm font-medium text-on-surface-variant">
                     GitHub URL
                   </span>
                   <div className="glowing-border relative rounded-lg border border-white/10 transition-all">

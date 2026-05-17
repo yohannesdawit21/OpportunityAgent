@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { AppShell } from '../components/layout/AppShell';
 import { Icon } from '../components/ui/Icon';
 
@@ -20,6 +21,17 @@ const CONNECTIONS = [
 ];
 
 export function NetworkPage() {
+  const [connected, setConnected] = useState<Set<string>>(new Set());
+
+  const toggleConnect = (name: string) => {
+    setConnected((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
+
   return (
     <AppShell>
       <div className="mx-auto max-w-[1280px] px-4 md:px-6">
@@ -34,29 +46,37 @@ export function NetworkPage() {
         </header>
 
         <div className="space-y-4">
-          {CONNECTIONS.map((person) => (
-            <article
-              key={person.name}
-              className="glass-card flex items-center justify-between gap-4 rounded-xl p-5"
-            >
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-primary/20 bg-primary/10">
-                  <Icon name="person" className="text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold text-on-surface">{person.name}</p>
-                  <p className="text-sm text-on-surface-variant">{person.role}</p>
-                  <p className="mt-1 text-xs text-primary">{person.mutual}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-on-surface hover:bg-white/5"
+          {CONNECTIONS.map((person) => {
+            const isConnected = connected.has(person.name);
+            return (
+              <article
+                key={person.name}
+                className="glass-card flex items-center justify-between gap-4 rounded-xl p-5"
               >
-                Connect
-              </button>
-            </article>
-          ))}
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-primary/20 bg-primary/10">
+                    <Icon name="person" className="text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-on-surface">{person.name}</p>
+                    <p className="text-sm text-on-surface-variant">{person.role}</p>
+                    <p className="mt-1 text-xs text-primary">{person.mutual}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleConnect(person.name)}
+                  className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                    isConnected
+                      ? 'border-primary/40 bg-primary/10 text-primary'
+                      : 'border-white/10 text-on-surface hover:bg-white/5'
+                  }`}
+                >
+                  {isConnected ? 'Pending' : 'Connect'}
+                </button>
+              </article>
+            );
+          })}
         </div>
       </div>
     </AppShell>
