@@ -215,9 +215,11 @@ Access-Control-Allow-Headers: Content-Type, Authorization
 
 ## Checklist for “backend done”
 
-- [ ] `POST /profile/analyze` accepts resume + links, returns opportunities
-- [ ] `GET /opportunities` returns persisted matches
-- [ ] Cover letter + draft + submit endpoints work
-- [ ] `.env` has `VITE_USE_MOCK_API=false`
-- [ ] Error bodies use `{ message, code? }`
-- [ ] File upload size limit (e.g. 10 MB) enforced
+- [x] `POST /profile/analyze` accepts resume + links, returns opportunities
+- [x] `GET /opportunities` returns persisted matches
+- [x] Cover letter + draft + submit endpoints work
+- [x] `.env` has `VITE_USE_MOCK_API=false`
+- [x] Error bodies use `{ message, code? }`
+- [x] File upload size limit (e.g. 10 MB) enforced
+
+Implementation lives in `backend/` (Express + `@cursor/sdk`). Run `npm run dev:backend` and set `CURSOR_API_KEY` in `backend/.env`.

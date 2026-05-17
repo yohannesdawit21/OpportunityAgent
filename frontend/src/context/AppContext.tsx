@@ -11,17 +11,19 @@ import {
 import {
   analyzeProfile as analyzeProfileApi,
   generateCoverLetter,
+  getOpportunities,
   saveApplicationDraft,
   submitApplication,
+  useMockApi,
 } from '../api';
 import { ApiError } from '../api/types';
 import {
   AI_STRENGTHS,
   DEFAULT_PROFILE,
   SKILL_TAGS,
-  opportunities,
+  opportunities as seedOpportunities,
 } from '../data/opportunities';
-import { loadJson, saveJson } from '../lib/storage';
+import { loadJson, remove, saveJson } from '../lib/storage';
 import type {
   AnalysisStatus,
   Opportunity,
@@ -40,6 +42,7 @@ interface AppContextValue {
   aiStrengths: string[];
   rolesScanned: number;
   analysisStatus: AnalysisStatus;
+  sessionId?: string;
   analysisError: string | null;
   clearAnalysisError: () => void;
   startAnalysis: () => Promise<void>;
@@ -67,6 +70,9 @@ interface AppContextValue {
   ) => void;
   demoFastScan: boolean;
   completeDemoScan: () => void;
+  apiMode: 'mock' | 'live';
+  backendConnected: boolean | null;
+  clearStoredData: () => void;
 }
 
 const STORAGE_KEY = 'app-state';
@@ -80,19 +86,24 @@ function loadPersisted(): PersistedAppState {
   });
 }
 
-function hydrateOpportunities(): Opportunity[] {
-  const persisted = loadPersisted();
-  if (persisted.analysisStatus !== 'complete') return [];
-  return opportunities.map((o) => ({ ...o }));
+function initialOpportunities(persisted: PersistedAppState): Opportunity[] {
+  if (persisted.opportunities?.length) {
+    return persisted.opportunities.map((o) => ({ ...o }));
+  }
+  return [];
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const persisted = loadPersisted();
+  const apiMode: 'mock' | 'live' = useMockApi() ? 'mock' : 'live';
 
   const [profile, setProfileState] = useState<UserProfile>(persisted.profile);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [opportunities, setOpportunities] = useState<Opportunity[]>(() =>
-    persisted.analysisStatus === 'complete' ? hydrateOpportunities() : [],
+    initialOpportunities(persisted),
+  );
+  const [backendConnected, setBackendConnected] = useState<boolean | null>(
+    apiMode === 'mock' ? null : null,
   );
   const [skillTags, setSkillTags] = useState<string[]>(
     persisted.skillTags ?? SKILL_TAGS,
@@ -132,6 +143,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       skillTags,
       aiStrengths,
       opportunityIds: opportunities.map((o) => o.id),
+      opportunities:
+        analysisStatus === 'complete' && opportunities.length > 0
+          ? opportunities
+          : undefined,
     };
     saveJson(STORAGE_KEY, state);
   }, [
@@ -145,17 +160,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
   ]);
 
   useEffect(() => {
-    if (analysisStatus !== 'complete') return;
+    if (apiMode === 'mock') return;
+
+    let cancelled = false;
     void (async () => {
       try {
-        const { getOpportunities } = await import('../api');
-        const list = await getOpportunities();
-        if (list.length > 0) setOpportunities(list);
+        const { checkApiHealth } = await import('../api');
+        const health = await checkApiHealth();
+        if (!cancelled) setBackendConnected(health.ok);
+
+        if (
+          analysisStatus === 'complete' &&
+          opportunities.length === 0
+        ) {
+          const list = await getOpportunities();
+          if (!cancelled && list.length > 0) setOpportunities(list);
+        }
       } catch {
-        // keep analysis result set
+        if (!cancelled) setBackendConnected(false);
       }
     })();
-  }, [analysisStatus]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiMode, analysisStatus, opportunities.length]);
 
   const setProfile = useCallback((patch: Partial<UserProfile>) => {
     setProfileState((prev) => ({ ...prev, ...patch }));
@@ -174,6 +203,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const run = async () => {
       try {
+        setOpportunities([]);
+        setSkillTags([]);
+        setAiStrengths([]);
         const result = await analyzeProfileApi({
           profile,
           resumeFile: resumeFile ?? undefined,
@@ -290,7 +322,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setApplicationMessage(null);
   }, []);
 
+  const clearStoredData = useCallback(() => {
+    remove(STORAGE_KEY);
+  }, []);
+
   const resetApp = useCallback(() => {
+    clearStoredData();
     setProfileState(DEFAULT_PROFILE);
     setResumeFile(null);
     setOpportunities([]);
@@ -304,10 +341,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSelectedOpportunity(null);
     setApplicationMessage(null);
     setDemoFastScan(false);
-  }, []);
+  }, [clearStoredData]);
 
   const completeDemoScan = useCallback(() => {
-    setOpportunities(opportunities.map((o) => ({ ...o })));
+    setOpportunities(seedOpportunities.map((o) => ({ ...o })));
+    setSkillTags(SKILL_TAGS);
+    setAiStrengths(AI_STRENGTHS);
     setRolesScanned(1240);
     setAnalysisStatus('complete');
     setDemoFastScan(false);
@@ -343,7 +382,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSkillTags(SKILL_TAGS);
       setAiStrengths(AI_STRENGTHS);
       setRolesScanned(1240);
-      setOpportunities(opportunities.map((o) => ({ ...o })));
+      setOpportunities(seedOpportunities.map((o) => ({ ...o })));
 
       if (screen === 'scanning') {
         setDemoFastScan(true);
@@ -357,8 +396,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (screen === 'application') {
         const target =
-          opportunities.find((o) => o.id === 'neuralflow-lead-react') ??
-          opportunities[0];
+          seedOpportunities.find((o) => o.id === 'neuralflow-lead-react') ??
+          seedOpportunities[0];
         setSelectedOpportunity({ ...target });
       } else {
         setSelectedOpportunity(null);
@@ -378,6 +417,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       aiStrengths,
       rolesScanned,
       analysisStatus,
+      sessionId,
       analysisError,
       clearAnalysisError,
       startAnalysis,
@@ -396,6 +436,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loadDemoForScreen,
       demoFastScan,
       completeDemoScan,
+      apiMode,
+      backendConnected,
+      clearStoredData,
     }),
     [
       profile,
@@ -406,6 +449,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       aiStrengths,
       rolesScanned,
       analysisStatus,
+      sessionId,
       analysisError,
       clearAnalysisError,
       startAnalysis,
@@ -423,6 +467,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loadDemoForScreen,
       demoFastScan,
       completeDemoScan,
+      apiMode,
+      backendConnected,
+      clearStoredData,
     ],
   );
 

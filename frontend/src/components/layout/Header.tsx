@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { USER_AVATAR } from '../../data/opportunities';
+import { getApiMode } from '../../api';
 import { useApp } from '../../context/AppContext';
 import { Icon } from '../ui/Icon';
 
@@ -18,8 +19,9 @@ const NAV_LINKS = [
 
 export function Header({ showNav = true, minimal = false }: HeaderProps) {
   const { pathname } = useLocation();
-  const { analysisStatus } = useApp();
+  const { analysisStatus, backendConnected } = useApp();
   const canUseApp = analysisStatus === 'complete';
+  const apiMode = getApiMode();
 
   return (
     <header className="fixed top-0 z-50 flex h-16 w-full items-center justify-between border-b border-white/10 bg-background/80 px-4 shadow-[0_0_20px_rgba(180,197,255,0.05)] backdrop-blur-xl md:px-6">
@@ -35,6 +37,32 @@ export function Header({ showNav = true, minimal = false }: HeaderProps) {
       </Link>
 
       <div className="flex items-center gap-3 md:gap-6">
+        {!minimal && (
+          <span
+            className={`hidden rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider sm:inline ${
+              apiMode === 'mock'
+                ? 'bg-amber-500/20 text-amber-300'
+                : backendConnected
+                  ? 'bg-tertiary/20 text-tertiary'
+                  : backendConnected === false
+                    ? 'bg-red-500/20 text-red-300'
+                    : 'bg-white/10 text-on-surface-variant'
+            }`}
+            title={
+              apiMode === 'mock'
+                ? 'In-browser mock API'
+                : 'Express backend + Cursor SDK'
+            }
+          >
+            {apiMode === 'mock'
+              ? 'Mock'
+              : backendConnected
+                ? 'Live API'
+                : backendConnected === false
+                  ? 'Offline'
+                  : '…'}
+          </span>
+        )}
         {showNav && !minimal && canUseApp && (
           <nav className="hidden gap-5 md:flex">
             {NAV_LINKS.map((link) => (

@@ -6,7 +6,15 @@ import { useApp } from '../context/AppContext';
 
 export function ProfilePage() {
   const navigate = useNavigate();
-  const { profile, skillTags, aiStrengths, rolesScanned, resetApp } = useApp();
+  const {
+    profile,
+    skillTags,
+    aiStrengths,
+    rolesScanned,
+    resetApp,
+    apiMode,
+    sessionId,
+  } = useApp();
 
   return (
     <AppShell>
@@ -64,6 +72,22 @@ export function ProfilePage() {
               </span>
             ))}
           </div>
+        </section>
+
+        <section className="glass-card mb-6 rounded-xl p-6">
+          <h2 className="mb-2 text-lg font-semibold text-on-surface">API</h2>
+          <p className="text-sm text-on-surface-variant">
+            Mode:{' '}
+            <span className="font-semibold text-primary">
+              {apiMode === 'live' ? 'Live backend' : 'In-browser mock'}
+            </span>
+            {sessionId ? (
+              <>
+                {' '}
+                · Session <code className="text-xs">{sessionId}</code>
+              </>
+            ) : null}
+          </p>
         </section>
 
         <section className="glass-card mb-8 rounded-xl border-l-2 border-l-tertiary p-6">

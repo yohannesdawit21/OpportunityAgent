@@ -19,8 +19,8 @@ export function OnboardingMobileBar({
     >
       {!canAnalyze && (
         <p className="mb-2 text-center text-xs text-on-surface-variant">
-          Upload a resume <span className="text-primary">or</span> add GitHub to
-          continue
+          Add your name plus a resume <span className="text-primary">or</span>{' '}
+          GitHub URL to continue
         </p>
       )}
       <button

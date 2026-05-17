@@ -6,6 +6,10 @@ export function useMockApi(): boolean {
   return import.meta.env.VITE_USE_MOCK_API !== 'false';
 }
 
+export function getApiMode(): 'mock' | 'live' {
+  return useMockApi() ? 'mock' : 'live';
+}
+
 export async function apiRequest<T>(
   path: string,
   options: RequestInit = {},

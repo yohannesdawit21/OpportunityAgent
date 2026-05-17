@@ -1,24 +1,32 @@
-import type { Opportunity } from '../types';
+export type OpportunityType =
+  | 'all'
+  | 'internships'
+  | 'hackathons'
+  | 'remote'
+  | 'fellowships';
 
-export const DEFAULT_PROFILE = {
-  name: '',
-  github: '',
-  linkedin: '',
-  resumeUploaded: false,
-};
+export interface RoadmapStep {
+  id: string;
+  title: string;
+  description: string;
+  status: 'done' | 'active' | 'pending';
+}
 
-export const USER_AVATAR =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuA_brBEZz5mIs-cS4h7bXO7vpJ_F_pyLXJAdCTxni2J5xmqRdVsA_s8c6-IrWzi1fuqhUR6CTOjN52kjQ8ACRFb9iMNAXMGlo5Ure0XVP2dQ4xaMfRITqIJQh2qS9O2CvFLIRvneTFi2WF5lsdbt4HSWRzMd2oUNguknOe-n5Zf8Gpt4Kb9UxKpWxU4rgVZc3iEJAvzkousKVMAdWmsTaTjCZB3BGn3KLDzwSxw8t3LG7Qro_L1iJtj8YYJBLida-Zzoc6ICMUZdto';
+export interface Opportunity {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  matchScore: number;
+  rationale: string;
+  logoUrl: string;
+  types: OpportunityType[];
+  missingSkills?: string[];
+  coverLetter: string;
+  roadmap: RoadmapStep[];
+}
 
-export const SKILL_TAGS = ['Python', 'React', 'TensorFlow', 'Node.js'];
-
-export const AI_STRENGTHS = [
-  'Full-Stack Architecture',
-  'Rapid Prototyping',
-  'Scalable Systems',
-];
-
-export const opportunities: Opportunity[] = [
+export const SEED_OPPORTUNITIES: Opportunity[] = [
   {
     id: 'lumina-senior-pe',
     title: 'Senior Product Engineer',
@@ -37,7 +45,7 @@ I am writing to express my strong interest in the Senior Product Engineer positi
 My background in scalable architecture and rapid prototyping aligns with your engineering culture. I would welcome the chance to contribute to your team.
 
 Best regards,
-Alex Chen`,
+{{name}}`,
     roadmap: [
       {
         id: '1',
@@ -78,7 +86,7 @@ I am excited to apply for the ML Infrastructure Intern role. My experience with 
 I am eager to learn from your ML infrastructure experts and contribute to production tooling.
 
 Best regards,
-Alex Chen`,
+{{name}}`,
     roadmap: [
       {
         id: '1',
@@ -116,10 +124,10 @@ Alex Chen`,
 
 I am writing to express my strong interest in the Lead React Developer position. Having spent the last 5 years scaling enterprise-grade React applications, I am particularly drawn to NeuralFlow's commitment to low-latency AI interfaces.
 
-My background in optimizing complex state management systems and mentoring high-performing engineering teams aligns perfectly with the goals of this role. I am excited about the possibility of bringing my technical expertise to your mission.
+My background in optimizing complex state management systems and mentoring high-performing engineering teams aligns perfectly with the goals of this role.
 
 Best regards,
-Alex Chen`,
+{{name}}`,
     roadmap: [
       {
         id: '1',
@@ -160,7 +168,7 @@ Alex Chen`,
 I am interested in the Senior Product Designer role and would bring a builder mindset from shipping full-stack products end to end.
 
 Best regards,
-Alex Chen`,
+{{name}}`,
     roadmap: [
       {
         id: '1',
@@ -176,4 +184,11 @@ Alex Chen`,
       },
     ],
   },
+];
+
+export const DEFAULT_SKILL_TAGS = ['Python', 'React', 'TensorFlow', 'Node.js'];
+export const DEFAULT_AI_STRENGTHS = [
+  'Full-Stack Architecture',
+  'Rapid Prototyping',
+  'Scalable Systems',
 ];

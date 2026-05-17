@@ -54,4 +54,6 @@ export interface PersistedAppState {
   skillTags?: string[];
   aiStrengths?: string[];
   opportunityIds?: string[];
+  /** Snapshot from backend analyze — avoids reloading static seed data */
+  opportunities?: Opportunity[];
 }

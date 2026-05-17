@@ -6,7 +6,9 @@ export {
   submitApplication,
 } from './opportunityAgentApi';
 export { ApiError } from './types';
-export { useMockApi } from './client';
+export { checkApiHealth } from './health';
+export { getApiMode, useMockApi } from './client';
+export type { ApiHealthResponse } from './health';
 export type {
   AnalyzeProfileRequest,
   AnalyzeProfileResponse,

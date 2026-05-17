@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { BottomNav } from '../components/layout/BottomNav';
 import { Header } from '../components/layout/Header';
 import { OnboardingMobileBar } from '../components/onboarding/OnboardingMobileBar';
+import { ApiStatusBanner } from '../components/ui/ApiStatusBanner';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Icon } from '../components/ui/Icon';
 import { useApp } from '../context/AppContext';
@@ -45,8 +46,10 @@ export function OnboardingPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const canAnalyze =
+  const hasName = profile.name.trim().length > 0;
+  const hasProfileSource =
     profile.resumeUploaded || profile.github.trim().length > 0;
+  const canAnalyze = hasName && hasProfileSource;
 
   const attachFile = useCallback(
     (file: File | undefined) => {
@@ -83,6 +86,8 @@ export function OnboardingPage() {
           canUseApp ? 'pb-28 lg:pb-24' : 'pb-36 lg:pb-24'
         }`}
       >
+        <ApiStatusBanner />
+
         {analysisError && (
           <ErrorBanner message={analysisError} onDismiss={clearAnalysisError} />
         )}
@@ -241,8 +246,8 @@ export function OnboardingPage() {
               </div>
               {!canAnalyze && (
                 <p className="mb-3 hidden text-center text-xs text-on-surface-variant lg:block">
-                  Upload a resume <span className="text-primary">or</span> enter a
-                  GitHub URL to continue.
+                  Enter your name and upload a resume{' '}
+                  <span className="text-primary">or</span> a GitHub URL to continue.
                 </p>
               )}
               <button
@@ -263,8 +268,9 @@ export function OnboardingPage() {
             Jump to any screen (demo)
           </p>
           <p className="mb-4 text-center text-xs text-on-surface-variant md:mb-6">
-            Upload → Analyze → scanning → dashboard. Bottom nav unlocks after
-            analysis.
+            Skips the backend — uses built-in demo data only. For judges: use{' '}
+            <strong className="text-on-surface">Analyze Profile</strong> above
+            with the live API banner green.
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {(
