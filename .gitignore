@@ -1,7 +1,6 @@
 node_modules
 dist
 .vite
-.stitch-cache
 *.local
 .env
 .DS_Store

@@ -30,8 +30,6 @@ src/
   data/          mock opportunities
   features/      Application helper panel
   pages/         route screens
-stitch-assets/   Stitch design exports
-scripts/         fetch-stitch.sh (re-download assets)
 ```
 
 See `../BACKEND.md` for the API contract.
