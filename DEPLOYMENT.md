@@ -1,45 +1,63 @@
-# Deploy to Vercel
+# Deploy to Vercel (multi-service)
 
-One Vercel project deploys the **React frontend** and **Express API** (serverless).
+This project uses Vercel **Services** (`experimentalServices` in `vercel.json`):
+
+| Service | Path | Role |
+|---------|------|------|
+| `frontend` | `/` | Vite + React SPA |
+| `backend` | `/_/backend` | Express API + Cursor SDK |
+
+Browser API calls go to `/_/backend/api/...` (see `frontend/.env.production`).
 
 ## Prerequisites
 
-- [Vercel account](https://vercel.com)
-- [Cursor API key](https://cursor.com/dashboard/cloud-agents) for live AI
+- [Vercel account](https://vercel.com) with **Services** enabled
+- [Cursor API key](https://cursor.com/dashboard/cloud-agents)
 
 ## Deploy
 
-1. Push this repo to GitHub.
-2. Import the project in [Vercel](https://vercel.com/new).
-3. **Framework preset:** Other (settings are read from `vercel.json`).
-4. Add **Environment variables** (Production + Preview):
+1. Push the repo to GitHub.
+2. [Import project](https://vercel.com/new) on Vercel.
+3. **Framework preset:** set to **Services** (Project Settings → Build & Deployment).
+4. Environment variables (Production + Preview):
 
 | Name | Value |
 |------|--------|
 | `CURSOR_API_KEY` | Your Cursor API key |
 | `VITE_USE_MOCK_API` | `false` |
-| `VITE_API_URL` | `/api` |
-| `USE_AGENT_FALLBACK` | `false` (optional: `true` if no key) |
+| `VITE_API_URL` | `/_/backend/api` |
+| `USE_AGENT_FALLBACK` | `false` |
 
 5. Deploy.
 
-## After deploy
+## Local development
 
-- Open your `*.vercel.app` URL.
-- Green **Live API** banner should appear.
-- Run **Analyze Profile** (wait up to ~2 minutes on first cold start).
-
-## Notes
-
-- **Function timeout:** `vercel.json` sets `maxDuration: 300` (5 min). Requires a Vercel plan that supports long-running functions (Pro / Fluid Compute). On Hobby, analyze may time out — use a local or Render backend instead.
-- **Sessions:** API sessions are in-memory per serverless instance. The app stores results in the browser after analyze; cover-letter works best right after analysis on the same instance.
-- **Local dev** is unchanged: `npm run dev:all` with backend on port 3001.
-
-## CLI deploy
+**Option A — separate terminals (current):**
 
 ```bash
-npm i -g vercel
-vercel
-vercel env add CURSOR_API_KEY
-vercel --prod
+npm run dev:backend   # :3001
+npm run dev           # :5173, proxies /api → backend
+```
+
+**Option B — Vercel Services locally:**
+
+```bash
+npx vercel dev -L
+```
+
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| 404 on all routes | Framework preset must be **Services**, not Vite/Other |
+| API 404 | Use `VITE_API_URL=/_/backend/api`, not `/api` |
+| Analyze timeout | Backend `maxDuration` is 300s; needs a plan that supports long functions |
+| CORS errors | Use relative API URL `/_/backend/api` (same origin) |
+
+## CLI
+
+```bash
+npx vercel
+npx vercel env add CURSOR_API_KEY
+npx vercel --prod
 ```

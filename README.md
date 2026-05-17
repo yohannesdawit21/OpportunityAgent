@@ -32,7 +32,7 @@ virtual hackaton/
 
 ## Deploy to Vercel
 
-See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for one-click deploy steps, environment variables, and notes on function timeouts.
+See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for Vercel **Services** deploy (`experimentalServices`), env vars, and Framework preset **Services**.
 
 ---
 

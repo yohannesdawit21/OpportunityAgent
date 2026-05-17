@@ -8,6 +8,7 @@
     "start": "node dist/index.js",
     "build": "tsc"
   },
+  "main": "dist/index.js",
   "dependencies": {
     "@cursor/sdk": "^1.0.13",
     "cors": "^2.8.5",
