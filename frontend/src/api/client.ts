@@ -1,6 +1,12 @@
 import { ApiError, type ApiErrorBody } from './types';
 
-const baseUrl = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '');
+function resolveApiBaseUrl(): string {
+  const fromEnv = import.meta.env.VITE_API_URL?.trim();
+  if (fromEnv) return fromEnv.replace(/\/$/, '');
+  return import.meta.env.PROD ? '/api' : '/api';
+}
+
+const baseUrl = resolveApiBaseUrl();
 
 let activeSessionId: string | undefined;
 
@@ -18,6 +24,10 @@ export function useMockApi(): boolean {
 
 export function getApiMode(): 'mock' | 'live' {
   return useMockApi() ? 'mock' : 'live';
+}
+
+export function getApiBaseUrl(): string {
+  return baseUrl;
 }
 
 export async function apiRequest<T>(
@@ -41,12 +51,18 @@ export async function apiRequest<T>(
   if (!response.ok) {
     let message = response.statusText;
     let code: string | undefined;
-    try {
-      const body = (await response.json()) as ApiErrorBody;
-      message = body.message ?? message;
-      code = body.code;
-    } catch {
-      // non-JSON error body
+    const contentType = response.headers.get('content-type') ?? '';
+    if (contentType.includes('application/json')) {
+      try {
+        const body = (await response.json()) as ApiErrorBody;
+        message = body.message ?? message;
+        code = body.code;
+      } catch {
+        // non-JSON error body
+      }
+    } else if (contentType.includes('text/html')) {
+      message =
+        'API returned HTML instead of JSON — check VITE_API_URL is /api on Vercel.';
     }
     throw new ApiError(message, response.status, code);
   }

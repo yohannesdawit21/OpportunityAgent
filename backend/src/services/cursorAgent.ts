@@ -1,4 +1,3 @@
-import { Agent, CursorAgentError } from '@cursor/sdk';
 import {
   DEFAULT_AI_STRENGTHS,
   DEFAULT_SKILL_TAGS,
@@ -75,10 +74,10 @@ function extractJsonPayload<T>(text: string): T | null {
 async function runPrompt(prompt: string): Promise<string> {
   const key = apiKey();
   if (!key) {
-    throw new CursorAgentError('CURSOR_API_KEY is not set', {
-      isRetryable: false,
-    });
+    throw new Error('CURSOR_API_KEY is not set');
   }
+
+  const { Agent } = await import('@cursor/sdk');
 
   console.log('[cursor-agent] starting agent run…');
   const result = await Agent.prompt(prompt, {
@@ -387,4 +386,3 @@ Respond with ONLY the cover letter text (no JSON, no markdown fences).`;
   return opportunity.coverLetter;
 }
 
-export { CursorAgentError };

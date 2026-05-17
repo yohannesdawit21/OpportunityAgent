@@ -170,7 +170,7 @@ If `CURSOR_API_KEY` is missing and `USE_AGENT_FALLBACK=true`, server returns det
 
 | Integration | Where | Notes |
 |-------------|-------|-------|
-| **Cursor Agent SDK** | `cursorAgent.ts` | Model `composer-2`; parses JSON from agent text |
+| **Cursor Agent SDK** | `cursorAgent.ts` | See [§8 Implementing the Cursor Agent SDK](#8-implementing-the-cursor-agent-sdk) |
 | **GitHub API** | `github.ts` | Public profile/repos for analyze context |
 | **Resume upload** | `profile.ts` + `resumeParser.ts` | PDF/DOC/DOCX, max 10 MB |
 | **Vite proxy** | `frontend/vite.config.ts` | `/api` → `localhost:3001` |
@@ -204,10 +204,178 @@ Never commit `.env` files. Judges must supply their own API key.
 
 ---
 
-## 8. What to read next
+## 8. Implementing the Cursor Agent SDK
+
+This project uses the official **`@cursor/sdk`** package on the **backend only**. The React app never sees `CURSOR_API_KEY`; it only calls your Express REST API.
+
+### 8.1 Install and configure
+
+**Package** (already in `backend/package.json`):
+
+```bash
+cd backend
+npm install @cursor/sdk
+```
+
+**Environment** (`backend/.env`):
+
+```env
+CURSOR_API_KEY=your_key_from_cursor_dashboard
+USE_AGENT_FALLBACK=false   # true = skip SDK, return seed jobs
+PORT=3001
+```
+
+Get a key from the [Cursor dashboard](https://cursor.com/dashboard) (Cloud Agents / API). The health endpoint reports whether a key is present:
+
+```bash
+curl http://localhost:3001/api/health
+# { "ok": true, "agent": true, "fallback": false }
+```
+
+### 8.2 Core pattern: `Agent.prompt`
+
+All AI work goes through one helper in `backend/src/services/cursorAgent.ts`:
+
+```typescript
+import { Agent, CursorAgentError } from '@cursor/sdk';
+
+const result = await Agent.prompt(prompt, {
+  apiKey: process.env.CURSOR_API_KEY,
+  model: { id: 'composer-2' },
+  local: {
+    cwd: process.cwd(),
+    settingSources: [],
+  },
+});
+
+if (result.status === 'error') {
+  throw new Error(`Agent run failed (${result.id ?? 'unknown'})`);
+}
+
+const text = extractAssistantText(result.result);
+```
+
+| Option | Purpose in this app |
+|--------|---------------------|
+| `apiKey` | Authenticates with Cursor Cloud (server-side only) |
+| `model.id` | `composer-2` — fast model suited to structured JSON tasks |
+| `local.cwd` | Working directory for the agent runtime (repo root) |
+| `local.settingSources` | Empty — we do not load IDE rules; prompts are self-contained |
+
+`Agent.prompt` is **awaited** (blocking for that HTTP request). Profile analyze can take **30–120 seconds**; the frontend scanning UI covers that wait.
+
+### 8.3 Where the SDK is called
+
+```mermaid
+flowchart TB
+  subgraph routes [Express routes]
+    P[POST /api/profile/analyze]
+    C[POST /api/opportunities/:id/cover-letter]
+  end
+  subgraph cursorAgent [cursorAgent.ts]
+    A[analyzeProfileWithAgent]
+    G[generateCoverLetterWithAgent]
+    R[runPrompt → Agent.prompt]
+  end
+  P --> A --> R
+  C --> G --> R
+```
+
+| Function | Triggered by | Output |
+|----------|--------------|--------|
+| `analyzeProfileWithAgent` | `POST /api/profile/analyze` | `skillTags`, `aiStrengths`, `rolesScanned`, `opportunities[]` |
+| `generateCoverLetterWithAgent` | `POST /api/opportunities/:id/cover-letter` | Plain-text cover letter |
+
+**Pre-agent steps** (not SDK): resume parsing (`resumeParser.ts`), GitHub summary (`github.ts`). Their text is injected into the analyze prompt as context.
+
+### 8.4 Prompt design
+
+**Profile analysis** — one large prompt asks for **only JSON** with a fixed schema (skills, strengths, 4–6 jobs, cover letters, roadmaps). Candidate context is built in `buildEnrichedContext()`:
+
+- Name, GitHub URL, LinkedIn  
+- GitHub repo summary (REST)  
+- Resume text (PDF/DOC extract)
+
+**Cover letter** — separate prompt with candidate excerpt + job title/company/rationale; response is **plain text** (no JSON).
+
+Tips that work well with this SDK:
+
+1. **Be explicit about output shape** — include a JSON example in the prompt.  
+2. **Say “ONLY valid JSON”** for structured responses.  
+3. **Keep temperature implicit** — use task-focused instructions, not chat.  
+4. **Cap size** — resume excerpt truncated (~8k chars); cover letter prompt uses ~2500 chars of resume.
+
+### 8.5 Parsing agent responses
+
+The SDK returns structured `result.result`; this app normalizes it in `extractAssistantText()` then:
+
+1. **`extractJsonPayload<T>()`** — strips markdown fences, finds `{ ... }` or `[ ... ]`, `JSON.parse`.  
+2. **`normalizeOpportunity()`** — validates fields, generates `id` slugs, clamps `matchScore`, default roadmap steps.  
+3. On parse failure or empty opportunities → **fallback** (see below).
+
+For cover letters, the raw string is used if length > 80 characters; otherwise the existing letter on the opportunity is kept.
+
+### 8.6 Fallback when the SDK fails
+
+```typescript
+const useFallback = () =>
+  process.env.USE_AGENT_FALLBACK === 'true' || !apiKey();
+```
+
+| Condition | Behavior |
+|-----------|----------|
+| No `CURSOR_API_KEY` and `USE_AGENT_FALLBACK` not forced | `runPrompt` throws `CursorAgentError` |
+| `USE_AGENT_FALLBACK=true` | `seedFallback()` — static jobs from `backend/src/data/opportunities.ts` |
+| Agent error or invalid JSON | `analyzeProfileWithAgent` catches, logs, returns `seedFallback()` |
+
+For hackathon demos, prefer a valid API key and `USE_AGENT_FALLBACK=false` so judges see real agent output.
+
+### 8.7 End-to-end: add a new SDK feature
+
+Example: “explain why this job matches” endpoint.
+
+1. **Route** — `backend/src/routes/opportunities.ts`  
+   `POST /api/opportunities/:id/explain`
+
+2. **Service** — `explainMatchWithAgent(profile, opportunity)` in `cursorAgent.ts`:
+   - Build a short prompt with profile + job fields.  
+   - `const text = await runPrompt(prompt);`  
+   - Return `{ explanation: text }`.
+
+3. **Session** — read profile/opportunity from `store/session.ts` using `sessionId` (see `middleware/session.ts`).
+
+4. **Frontend** — add `apiRequest` in `frontend/src/api/opportunityAgentApi.ts` and call from a button in `OpportunityCard.tsx`.
+
+5. **Contract** — document request/response in `BACKEND.md`.
+
+Do **not** import `@cursor/sdk` in the frontend; keep all agent calls server-side.
+
+### 8.8 Local vs production
+
+| Environment | SDK runs | Notes |
+|-------------|----------|-------|
+| `npm run dev:backend` | `backend/src/index.ts` listens on `:3001` | Standard local hackathon setup |
+| Vercel Services | `backend/index.ts` exports Express `app` | No `listen()`; see [DEPLOYMENT.md](./DEPLOYMENT.md) |
+| Mock frontend | SDK not called | `VITE_USE_MOCK_API=true` |
+
+### 8.9 Debugging
+
+| Symptom | Check |
+|---------|--------|
+| `CURSOR_API_KEY is not set` | `backend/.env` loaded (`import 'dotenv/config'` in `index.ts`) |
+| Analyze always shows Lumina/Nebula seed jobs | Fallback path — inspect server logs for `[cursor-agent]` warnings |
+| Request hangs then fails | Agent timeout; ensure backend stays running; increase client patience on scanning page |
+| Invalid JSON | Log raw `extractAssistantText` output; tighten prompt or improve `extractJsonPayload` |
+
+Official package docs: [@cursor/sdk on npm](https://www.npmjs.com/package/@cursor/sdk). For REST-only migration notes, see [BACKEND.md](./BACKEND.md).
+
+---
+
+## 9. What to read next
 
 | Goal | Document |
 |------|----------|
 | Run the demo | [SUBMISSION.md](./SUBMISSION.md) |
 | Implement or test APIs | [BACKEND.md](./BACKEND.md) |
 | Install & scripts | [README.md](./README.md) |
+| Deploy to Vercel | [DEPLOYMENT.md](./DEPLOYMENT.md) |

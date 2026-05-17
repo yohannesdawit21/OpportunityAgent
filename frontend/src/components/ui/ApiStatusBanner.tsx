@@ -76,9 +76,10 @@ export function ApiStatusBanner() {
       >
         <Icon name="error" className="text-red-400" />
         <span>
-          <strong className="font-semibold">Backend offline.</strong> Run{' '}
-          <code className="rounded bg-black/30 px-1">npm run dev:backend</code>{' '}
-          in the <code className="rounded bg-black/30 px-1">backend/</code> folder.
+          <strong className="font-semibold">Backend offline.</strong>{' '}
+          {import.meta.env.PROD
+            ? 'Redeploy with Framework preset “Services” and VITE_API_URL=/api. Check /api/health on your domain.'
+            : 'Run npm run dev:backend in the backend/ folder.'}
         </span>
       </Banner>
     );

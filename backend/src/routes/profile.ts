@@ -1,9 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import {
-  analyzeProfileWithAgent,
-  CursorAgentError,
-} from '../services/cursorAgent.js';
+import { analyzeProfileWithAgent } from '../services/cursorAgent.js';
 import { fetchGitHubProfileSummary } from '../services/github.js';
 import { extractResumeText } from '../services/resumeParser.js';
 import { createSession, type ProfileInput } from '../store/session.js';
@@ -115,7 +112,12 @@ profileRouter.post(
         });
         return;
       }
-      if (err instanceof CursorAgentError) {
+      if (
+        err instanceof Error &&
+        (err.message.includes('CURSOR_API_KEY') ||
+          err.message.includes('Agent') ||
+          err.name === 'CursorAgentError')
+      ) {
         res.status(503).json({
           message: err.message || 'AI agent unavailable',
           code: 'AGENT_STARTUP_FAILED',

@@ -1,63 +1,46 @@
-# Deploy to Vercel (multi-service)
+# Deploy to Vercel (Services)
 
-This project uses Vercel **Services** (`experimentalServices` in `vercel.json`):
+## `vercel.json`
 
-| Service | Path | Role |
-|---------|------|------|
-| `frontend` | `/` | Vite + React SPA |
-| `backend` | `/_/backend` | Express API + Cursor SDK |
+```json
+{
+  "experimentalServices": {
+    "frontend": { "entrypoint": "frontend", "routePrefix": "/", "framework": "vite" },
+    "backend": { "entrypoint": "backend", "routePrefix": "/api", "framework": "express" }
+  }
+}
+```
 
-Browser API calls go to `/_/backend/api/...` (see `frontend/.env.production`).
+- Browser calls **`/api/health`**, **`/api/profile/analyze`**, etc.
+- Express defines routes as **`/health`**, **`/profile/...`** (Vercel strips the `/api` prefix).
 
-## Prerequisites
+## Required dashboard settings
 
-- [Vercel account](https://vercel.com) with **Services** enabled
-- [Cursor API key](https://cursor.com/dashboard/cloud-agents)
-
-## Deploy
-
-1. Push the repo to GitHub.
-2. [Import project](https://vercel.com/new) on Vercel.
-3. **Framework preset:** set to **Services** (Project Settings → Build & Deployment).
-4. Environment variables (Production + Preview):
+1. **Framework preset:** **Services** (not Vite / Other).
+2. **Environment variables:**
 
 | Name | Value |
 |------|--------|
-| `CURSOR_API_KEY` | Your Cursor API key |
+| `CURSOR_API_KEY` | Your key |
 | `VITE_USE_MOCK_API` | `false` |
-| `VITE_API_URL` | `/_/backend/api` |
-| `USE_AGENT_FALLBACK` | `false` |
+| `VITE_API_URL` | `/api` |
 
-5. Deploy.
+3. Redeploy after changing env vars (rebuild frontend).
 
-## Local development
-
-**Option A — separate terminals (current):**
+## Verify after deploy
 
 ```bash
-npm run dev:backend   # :3001
-npm run dev           # :5173, proxies /api → backend
+curl https://YOUR-APP.vercel.app/api/health
 ```
 
-**Option B — Vercel Services locally:**
+Expected: `{"ok":true,"agent":true,...}`
+
+If you get HTML, the API service is not running — check Framework preset **Services**.
+
+## Local dev
 
 ```bash
-npx vercel dev -L
+npm run dev:all
 ```
 
-## Troubleshooting
-
-| Issue | Fix |
-|-------|-----|
-| 404 on all routes | Framework preset must be **Services**, not Vite/Other |
-| API 404 | Use `VITE_API_URL=/_/backend/api`, not `/api` |
-| Analyze timeout | Backend `maxDuration` is 300s; needs a plan that supports long functions |
-| CORS errors | Use relative API URL `/_/backend/api` (same origin) |
-
-## CLI
-
-```bash
-npx vercel
-npx vercel env add CURSOR_API_KEY
-npx vercel --prod
-```
+Frontend proxies `/api` → `localhost:3001`.

@@ -1,6 +1,5 @@
 /**
- * Vercel Services entrypoint — exports the Express app (no listen()).
- * Local dev: npm run dev (uses src/index.ts with http.listen).
+ * Vercel Services entrypoint — export API router only (routePrefix `/api` is stripped).
+ * Local dev uses src/index.ts which mounts apiApp at /api.
  */
-import 'dotenv/config';
-export { app as default } from './src/app.js';
+export { apiApp as default } from './src/apiApp.js';
