@@ -29,11 +29,35 @@ import { AppContext } from './app-context';
 
 const STORAGE_KEY = 'app-state';
 
+/** Legacy demo / seed values saved by old “jump to screen” shortcuts */
+function isDemoProfile(profile: UserProfile): boolean {
+  return (
+    profile.name === 'Demo User' ||
+    profile.name === 'Alex Chen' ||
+    profile.resumeFileName === 'demo-resume.pdf' ||
+    /github\.com\/octocat/i.test(profile.github)
+  );
+}
+
 function loadPersisted(): PersistedAppState {
-  return loadJson<PersistedAppState>(STORAGE_KEY, {
+  const raw = loadJson<PersistedAppState>(STORAGE_KEY, {
     profile: DEFAULT_PROFILE,
     analysisStatus: 'idle',
   });
+
+  if (isDemoProfile(raw.profile)) {
+    return { profile: DEFAULT_PROFILE, analysisStatus: 'idle' };
+  }
+
+  // Fresh onboarding: never restore a partial profile from storage
+  if (raw.analysisStatus === 'idle') {
+    return {
+      profile: DEFAULT_PROFILE,
+      analysisStatus: 'idle',
+    };
+  }
+
+  return raw;
 }
 
 function initialOpportunities(persisted: PersistedAppState): Opportunity[] {
