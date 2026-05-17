@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express, { type Router } from 'express';
+import { getCursorApiKey } from './loadEnv.js';
 
 function corsOrigin(
   origin: string | undefined,
@@ -43,7 +44,7 @@ apiApp.use(express.json({ limit: '1mb' }));
 apiApp.get('/health', (_req, res) => {
   res.json({
     ok: true,
-    agent: Boolean(process.env.CURSOR_API_KEY?.trim()),
+    agent: Boolean(getCursorApiKey()),
     fallback: process.env.USE_AGENT_FALLBACK === 'true',
   });
 });

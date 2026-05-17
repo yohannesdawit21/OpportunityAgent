@@ -102,9 +102,11 @@ export function ApiStatusBanner() {
         <Icon name="warning" className="text-amber-400" />
         <span>
           <strong className="font-semibold">CURSOR_API_KEY missing on Vercel.</strong>{' '}
-          Add it under Project → Settings → Environment Variables (Production), redeploy,
-          then run Analyze Profile again. Without it you only get demo job cards
-          (Lumina, Nebula, etc.).
+          From the repo root run{' '}
+          <code className="rounded bg-black/30 px-1">npm run vercel:sync-env</code>{' '}
+          (uses <code className="rounded bg-black/30 px-1">backend/.env</code>), or add the key
+          in Project → Settings → Environment Variables for Production, redeploy, then run Analyze
+          Profile again. Without it you only get demo job cards (Lumina, Nebula, etc.).
         </span>
       </Banner>
     );

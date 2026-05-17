@@ -7,9 +7,10 @@ import {
   SEED_OPPORTUNITIES,
 } from '../data/opportunities.js';
 import { fetchGitHubProfileSummary } from './github.js';
+import { getCursorApiKey } from '../loadEnv.js';
 import type { ProfileInput } from '../store/session.js';
 
-const apiKey = () => process.env.CURSOR_API_KEY?.trim();
+const apiKey = () => getCursorApiKey();
 const useFallback = () => process.env.USE_AGENT_FALLBACK === 'true';
 
 export function assertAgentConfigured(): void {

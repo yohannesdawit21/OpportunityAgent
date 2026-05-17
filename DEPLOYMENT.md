@@ -27,6 +27,12 @@
 
 Apply to **Production** and **Preview**. Redeploy after adding variables.
 
+**Quick sync from local `backend/.env`** (after `npx vercel login`):
+
+```bash
+npm run vercel:sync-env
+```
+
 3. Redeploy after changing env vars (rebuild frontend).
 
 ## Verify after deploy
