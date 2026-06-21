@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Push CURSOR_API_KEY from backend/.env to the linked Vercel project.
+ * Push GEMINI_API_KEY from backend/.env to the linked Vercel project.
  * Usage: npm run vercel:sync-env
  */
 import { spawnSync } from 'node:child_process';
@@ -10,22 +10,23 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const envPath = path.join(root, 'backend', '.env');
+const ENV_KEY = 'GEMINI_API_KEY';
 
 function parseKey(file) {
   if (!existsSync(file)) {
-    console.error(`Missing ${file} — copy backend/.env.example and set CURSOR_API_KEY.`);
+    console.error(`Missing ${file} — copy backend/.env.example and set ${ENV_KEY}.`);
     process.exit(1);
   }
   const line = readFileSync(file, 'utf8')
     .split('\n')
-    .find((l) => /^\s*CURSOR_API_KEY\s*=/.test(l));
+    .find((l) => new RegExp(`^\\s*${ENV_KEY}\\s*=`).test(l));
   if (!line) {
-    console.error('CURSOR_API_KEY not found in backend/.env');
+    console.error(`${ENV_KEY} not found in backend/.env`);
     process.exit(1);
   }
-  const value = line.replace(/^\s*CURSOR_API_KEY\s*=\s*/, '').trim();
-  if (!value || value === 'your_cursor_api_key_here') {
-    console.error('Set a real CURSOR_API_KEY in backend/.env first.');
+  const value = line.replace(new RegExp(`^\\s*${ENV_KEY}\\s*=\\s*`), '').trim();
+  if (!value || value === 'your_gemini_api_key_here') {
+    console.error(`Set a real ${ENV_KEY} in backend/.env first.`);
     process.exit(1);
   }
   return value;
@@ -46,16 +47,16 @@ console.log('Linking project (if needed)…');
 run(['link', '--yes']);
 
 for (const target of ['production', 'preview', 'development']) {
-  console.log(`Setting CURSOR_API_KEY for ${target}…`);
+  console.log(`Setting ${ENV_KEY} for ${target}…`);
   spawnSync(
     'npx',
-    ['--yes', 'vercel@latest', 'env', 'rm', 'CURSOR_API_KEY', target, '--yes'],
+    ['--yes', 'vercel@latest', 'env', 'rm', ENV_KEY, target, '--yes'],
     { cwd: root, stdio: 'inherit' },
   );
   run([
     'env',
     'add',
-    'CURSOR_API_KEY',
+    ENV_KEY,
     target,
     '--value',
     key,

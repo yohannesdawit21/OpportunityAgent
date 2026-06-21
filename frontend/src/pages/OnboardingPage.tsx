@@ -103,7 +103,7 @@ export function OnboardingPage() {
           </h1>
           <p className="mx-auto max-w-2xl text-sm text-on-surface-variant sm:text-base md:text-lg">
             Works for any candidate. Upload a CV plus GitHub or LinkedIn — the
-            Cursor agent searches real matched roles for that person.
+            AI agent searches real matched roles for that person.
           </p>
         </section>
 

@@ -167,8 +167,8 @@ export function ScanningPage() {
                 <div className="flex items-center justify-center gap-2 text-sm text-on-surface-variant">
                   <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" />
                   <span>
-                    Cursor agent is reading your CV, GitHub, and LinkedIn — this
-                    can take 30–90 seconds…
+                    AI agent is reading your CV, GitHub, and LinkedIn — this
+                    can take 10–40 seconds…
                   </span>
                 </div>
               </div>

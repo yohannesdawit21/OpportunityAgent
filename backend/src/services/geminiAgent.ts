@@ -7,16 +7,25 @@ import {
   SEED_OPPORTUNITIES,
 } from '../data/opportunities.js';
 import { fetchGitHubProfileSummary } from './github.js';
-import { getCursorApiKey } from '../loadEnv.js';
+import { getGeminiApiKey } from '../loadEnv.js';
 import type { ProfileInput } from '../store/session.js';
 
-const apiKey = () => getCursorApiKey();
+const apiKey = () => getGeminiApiKey();
 const useFallback = () => process.env.USE_AGENT_FALLBACK === 'true';
+
+/** Ordered list of models to try. First success wins; a 404/NOT_FOUND falls through to the next. */
+function modelChain(): string[] {
+  const primary = process.env.GEMINI_MODEL?.trim() || 'gemini-2.0-flash';
+  const chain = [primary, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+  return [...new Set(chain)];
+}
+
+const GEMINI_TIMEOUT_MS = 60_000;
 
 export function assertAgentConfigured(): void {
   if (apiKey() || useFallback()) return;
   throw new Error(
-    'CURSOR_API_KEY is not set on the server. Add it in Vercel → Settings → Environment Variables, then redeploy.',
+    'GEMINI_API_KEY is not set on the server. Add it in Vercel → Settings → Environment Variables, then redeploy.',
   );
 }
 
@@ -28,6 +37,7 @@ const OPPORTUNITY_TYPES: OpportunityType[] = [
   'fellowships',
 ];
 
+/** Defensive normalizer — Gemini usually returns a string, but tolerate candidate-shaped objects too. */
 function extractAssistantText(result: unknown): string {
   if (typeof result === 'string') return result;
   if (!result || typeof result !== 'object') return '';
@@ -78,30 +88,112 @@ function extractJsonPayload<T>(text: string): T | null {
   return null;
 }
 
-async function runPrompt(prompt: string): Promise<string> {
+interface GeminiResponse {
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: string }> };
+    finishReason?: string;
+  }>;
+  promptFeedback?: { blockReason?: string };
+  error?: { code?: number; status?: string; message?: string };
+}
+
+/** Returns true for "this model id is not available to your key/region" style errors so we can fall through. */
+function isModelNotFound(status: number, body: GeminiResponse): boolean {
+  if (status === 404) return true;
+  const apiStatus = body.error?.status ?? '';
+  const message = body.error?.message ?? '';
+  return apiStatus === 'NOT_FOUND' || /is not found|not supported|does not exist/i.test(message);
+}
+
+async function callGemini(
+  model: string,
+  prompt: string,
+  json: boolean,
+): Promise<{ text: string } | { retryable: true } | { fatal: string }> {
+  const key = apiKey();
+  if (!key) throw new Error('GEMINI_API_KEY is not set');
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key,
+        },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 4096,
+            responseMimeType: json ? 'application/json' : 'text/plain',
+          },
+        }),
+      },
+    );
+
+    const data = (await res.json().catch(() => ({}))) as GeminiResponse;
+
+    if (!res.ok) {
+      if (isModelNotFound(res.status, data)) return { retryable: true };
+      const reason = data.error?.message || `HTTP ${res.status}`;
+      return { fatal: `Gemini request failed: ${reason}` };
+    }
+
+    if (data.promptFeedback?.blockReason) {
+      return { fatal: `Gemini blocked the prompt (${data.promptFeedback.blockReason})` };
+    }
+
+    const parts = data.candidates?.[0]?.content?.parts ?? [];
+    const text = parts.map((p) => p.text ?? '').join('').trim();
+    if (!text) return { fatal: 'Gemini returned an empty response' };
+    return { text };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function runPrompt(prompt: string, opts: { json: boolean }): Promise<string> {
   const key = apiKey();
   if (!key) {
-    throw new Error('CURSOR_API_KEY is not set');
+    throw new Error('GEMINI_API_KEY is not set');
   }
 
-  const { Agent } = await import('@cursor/sdk');
+  const models = modelChain();
+  let lastError = 'Gemini request failed';
 
-  console.log('[cursor-agent] starting agent run…');
-  const result = await Agent.prompt(prompt, {
-    apiKey: key,
-    model: { id: 'composer-2' },
-    local: {
-      cwd: process.cwd(),
-      settingSources: [],
-    },
-  });
+  for (const model of models) {
+    console.log(`[gemini-agent] starting run (model=${model})…`);
+    let outcome;
+    try {
+      outcome = await callGemini(model, prompt, opts.json);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        lastError = `Gemini request timed out after ${GEMINI_TIMEOUT_MS / 1000}s`;
+        continue;
+      }
+      throw err;
+    }
 
-  if (result.status === 'error') {
-    throw new Error(`Agent run failed (${result.id ?? 'unknown'})`);
+    if ('text' in outcome) {
+      console.log(`[gemini-agent] run finished (model=${model})`);
+      return extractAssistantText(outcome.text).trim();
+    }
+    if ('retryable' in outcome) {
+      console.warn(`[gemini-agent] model "${model}" unavailable, trying next…`);
+      lastError = `Model "${model}" is not available for this API key`;
+      continue;
+    }
+    // fatal — auth, quota, safety: no point trying other models
+    throw new Error(outcome.fatal);
   }
 
-  console.log('[cursor-agent] agent run finished');
-  return extractAssistantText(result.result).trim();
+  throw new Error(lastError);
 }
 
 function slugify(value: string): string {
@@ -278,9 +370,10 @@ export async function analyzeProfileWithAgent(
     return { ...seedFallback(profile.name), source: 'fallback' };
   }
 
-  const githubSummary = profile.github
-    ? await fetchGitHubProfileSummary(profile.github)
-    : undefined;
+  // Reuse the summary the route already fetched; only fetch here if it was not provided.
+  const githubSummary =
+    profile.githubSummary ??
+    (profile.github ? await fetchGitHubProfileSummary(profile.github) : undefined);
   const profileWithContext: ProfileInput = { ...profile, githubSummary };
   const enriched = await buildEnrichedContext(profileWithContext);
 
@@ -325,11 +418,11 @@ Respond with ONLY valid JSON (no markdown outside JSON) in exactly this shape:
 }`;
 
   try {
-    const raw = await runPrompt(prompt);
+    const raw = await runPrompt(prompt, { json: true });
     const parsed = extractJsonPayload<AgentAnalysisPayload>(raw);
 
     if (!parsed?.skillTags?.length || !parsed.opportunities?.length) {
-      console.warn('[cursor-agent] invalid agent JSON shape, using enhanced retry');
+      console.warn('[gemini-agent] invalid agent JSON shape');
       throw new Error('Incomplete agent response');
     }
 
@@ -354,13 +447,13 @@ Respond with ONLY valid JSON (no markdown outside JSON) in exactly this shape:
       source: 'agent',
     };
   } catch (err) {
-    console.warn('[cursor-agent] full analyze failed:', err);
+    console.warn('[gemini-agent] full analyze failed:', err);
     if (useFallback()) {
       return { ...seedFallback(profile.name), source: 'fallback' };
     }
     throw err instanceof Error
       ? err
-      : new Error('Cursor agent analysis failed');
+      : new Error('Gemini analysis failed');
   }
 }
 
@@ -371,7 +464,7 @@ export async function generateCoverLetterWithAgent(
   >,
   opportunity: Opportunity,
 ): Promise<string> {
-  if (useFallback()) {
+  if (useFallback() || !apiKey()) {
     return opportunity.coverLetter;
   }
 
@@ -394,12 +487,11 @@ Match rationale: ${opportunity.rationale}
 Respond with ONLY the cover letter text (no JSON, no markdown fences).`;
 
   try {
-    const letter = await runPrompt(prompt);
+    const letter = await runPrompt(prompt, { json: false });
     if (letter.length > 80) return letter;
   } catch (err) {
-    console.warn('[cursor-agent] cover letter fallback:', err);
+    console.warn('[gemini-agent] cover letter fallback:', err);
   }
 
   return opportunity.coverLetter;
 }
-

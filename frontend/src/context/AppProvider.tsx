@@ -267,7 +267,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           (result.source === 'fallback' || isSeedOpportunityList(result.opportunities))
         ) {
           throw new Error(
-            'Server returned demo job data. Add CURSOR_API_KEY in Vercel → Environment Variables (Production), redeploy, then analyze again.',
+            'Server returned demo job data. Add GEMINI_API_KEY in Vercel → Environment Variables (Production), redeploy, then analyze again.',
           );
         }
         setOpportunities(result.opportunities);

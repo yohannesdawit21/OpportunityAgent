@@ -14,7 +14,7 @@ Copy `frontend/.env.example` to `frontend/.env`.
 ## Recommended stack
 
 - **Runtime:** Node.js (Express/Fastify) or Python (FastAPI)
-- **DB:** PostgreSQL (Neon is already in your Cursor MCP config)
+- **DB:** PostgreSQL (e.g. Neon) — optional; current build uses in-memory sessions
 - **Storage:** S3-compatible bucket for resume PDFs
 - **AI:** LLM for parsing resumes, scoring matches, generating cover letters
 - **Jobs:** Redis queue for long-running “scan” workflows
@@ -222,4 +222,4 @@ Access-Control-Allow-Headers: Content-Type, Authorization
 - [x] Error bodies use `{ message, code? }`
 - [x] File upload size limit (e.g. 10 MB) enforced
 
-Implementation lives in `backend/` (Express + `@cursor/sdk`). Run `npm run dev:backend` and set `CURSOR_API_KEY` in `backend/.env`.
+Implementation lives in `backend/` (Express + Google Gemini API via native `fetch`). Run `npm run dev:backend` and set `GEMINI_API_KEY` in `backend/.env`.

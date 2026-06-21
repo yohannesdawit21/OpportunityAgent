@@ -1,61 +1,47 @@
 import { Router } from 'express';
-import { requireSession } from '../middleware/session.js';
+import { resolveSession } from '../middleware/session.js';
 import { saveDraft, submitApplication } from '../store/session.js';
 
 export const applicationsRouter = Router();
 
+function readCoverLetter(body: unknown): string {
+  return String((body as { coverLetter?: unknown })?.coverLetter ?? '').trim();
+}
+
 applicationsRouter.put('/:opportunityId/draft', (req, res) => {
-  const session = requireSession(req);
-  if (!session) {
-    res.status(404).json({
-      message: 'Session not found. Run profile analysis first.',
-      code: 'NO_SESSION',
-    });
-    return;
-  }
-
-  const coverLetter = String(req.body?.coverLetter ?? '').trim();
+  const coverLetter = readCoverLetter(req.body);
   if (!coverLetter) {
-    res.status(400).json({
-      message: 'coverLetter is required',
-      code: 'VALIDATION',
-    });
+    res.status(400).json({ message: 'coverLetter is required', code: 'VALIDATION' });
     return;
   }
 
-  const draft = saveDraft(session.sessionId, req.params.opportunityId, coverLetter);
-  res.json({
-    draftId: `draft_${req.params.opportunityId}`,
-    savedAt: draft.savedAt,
-  });
+  // Stateless: persisting is best-effort (drafts are never read back), so a
+  // missing session must not block saving — this keeps the flow working on
+  // Vercel serverless where sessions live in a different lambda instance.
+  const session = resolveSession(req);
+  const savedAt = new Date().toISOString();
+  if (session) {
+    saveDraft(session.sessionId, req.params.opportunityId, coverLetter);
+  }
+
+  res.json({ draftId: `draft_${req.params.opportunityId}`, savedAt });
 });
 
 applicationsRouter.post('/:opportunityId/submit', (req, res) => {
-  const session = requireSession(req);
-  if (!session) {
-    res.status(404).json({
-      message: 'Session not found. Run profile analysis first.',
-      code: 'NO_SESSION',
-    });
-    return;
-  }
-
-  const coverLetter = String(req.body?.coverLetter ?? '').trim();
+  const coverLetter = readCoverLetter(req.body);
   if (!coverLetter) {
-    res.status(400).json({
-      message: 'coverLetter is required',
-      code: 'VALIDATION',
-    });
+    res.status(400).json({ message: 'coverLetter is required', code: 'VALIDATION' });
     return;
   }
 
-  const submission = submitApplication(
-    session.sessionId,
-    req.params.opportunityId,
-    coverLetter,
-  );
+  const session = resolveSession(req);
+  const submittedAt = new Date().toISOString();
+  if (session) {
+    submitApplication(session.sessionId, req.params.opportunityId, coverLetter);
+  }
+
   res.json({
     applicationId: `app_${req.params.opportunityId}_${Date.now()}`,
-    submittedAt: submission.submittedAt,
+    submittedAt,
   });
 });

@@ -21,7 +21,7 @@
 
 | Name | Value | Required |
 |------|--------|----------|
-| `CURSOR_API_KEY` | Your Cursor API key | **Yes** — without this you get demo jobs (Lumina, Nebula…) |
+| `GEMINI_API_KEY` | Your Google Gemini API key ([get one](https://aistudio.google.com/apikey)) | **Yes** — without this you get demo jobs (Lumina, Nebula…) |
 | `VITE_USE_MOCK_API` | `false` | **Yes** — must be exactly `false`, not empty |
 | `VITE_API_URL` | `/api` | Yes |
 
@@ -47,7 +47,7 @@ If you get **500** or `FUNCTION_INVOCATION_FAILED`, the backend did not build: e
 
 If you get **HTML**, the API service is not running — check Framework preset **Services**.
 
-**Required:** add `CURSOR_API_KEY` in Vercel → Settings → Environment Variables (Production).
+**Required:** add `GEMINI_API_KEY` in Vercel → Settings → Environment Variables (Production).
 
 If the app works on **localhost** but Vercel shows **Lumina / Nebula** demo cards, production is missing the key (`/api/health` → `"agent": false`). The key in `backend/.env` is never uploaded to Vercel — add it in the dashboard or run `npm run vercel:sync-env` after `npx vercel login`, then redeploy.
 

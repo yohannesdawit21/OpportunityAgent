@@ -51,7 +51,7 @@ export function Header({ showNav = true, minimal = false }: HeaderProps) {
             title={
               apiMode === 'mock'
                 ? 'In-browser mock API'
-                : 'Express backend + Cursor SDK'
+                : 'Express backend + Gemini AI'
             }
           >
             {apiMode === 'mock'

@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { requireSession } from '../middleware/session.js';
-import { generateCoverLetterWithAgent } from '../services/cursorAgent.js';
+import { resolveSession } from '../middleware/session.js';
+import { generateCoverLetterWithAgent } from '../services/geminiAgent.js';
+import type { Opportunity } from '../data/opportunities.js';
 
 export const opportunitiesRouter = Router();
 
 opportunitiesRouter.get('/', (req, res) => {
-  const session = requireSession(req);
+  const session = resolveSession(req);
   if (!session) {
     res.json([]);
     return;
@@ -15,27 +16,22 @@ opportunitiesRouter.get('/', (req, res) => {
 
 opportunitiesRouter.post('/:id/cover-letter', async (req, res, next) => {
   try {
-    const session = requireSession(req);
-    if (!session) {
-      res.status(404).json({
-        message: 'Session not found. Run profile analysis first.',
-        code: 'NO_SESSION',
-      });
-      return;
-    }
+    // Session is best-effort: on Vercel serverless the analyze lambda may differ
+    // from this one, so we also accept the opportunity/profile from the request body.
+    const session = resolveSession(req);
 
     const bodyOpp = req.body?.opportunity as
       | {
           id: string;
           title: string;
           company: string;
-          location: string;
-          rationale: string;
+          location?: string;
+          rationale?: string;
         }
       | undefined;
 
-    const opportunity =
-      session.opportunities.find((o) => o.id === req.params.id) ??
+    const opportunity: Opportunity | undefined =
+      session?.opportunities.find((o) => o.id === req.params.id) ??
       (bodyOpp?.id === req.params.id && bodyOpp.title && bodyOpp.company
         ? {
             id: bodyOpp.id,
@@ -52,7 +48,11 @@ opportunitiesRouter.post('/:id/cover-letter', async (req, res, next) => {
         : undefined);
 
     if (!opportunity) {
-      res.status(404).json({ message: 'Opportunity not found', code: 'NOT_FOUND' });
+      res.status(404).json({
+        message:
+          'Opportunity not found. Re-run profile analysis or include the opportunity details in the request.',
+        code: 'NOT_FOUND',
+      });
       return;
     }
 
@@ -62,11 +62,11 @@ opportunitiesRouter.post('/:id/cover-letter', async (req, res, next) => {
 
     const coverLetter = await generateCoverLetterWithAgent(
       {
-        name: profile?.name?.trim() || session.profile.name,
-        github: profile?.github?.trim() || session.profile.github,
-        linkedin: profile?.linkedin?.trim() || session.profile.linkedin,
-        resumeText: session.profile.resumeText,
-        githubSummary: session.profile.githubSummary,
+        name: profile?.name?.trim() || session?.profile.name || 'Candidate',
+        github: profile?.github?.trim() || session?.profile.github || '',
+        linkedin: profile?.linkedin?.trim() || session?.profile.linkedin || '',
+        resumeText: session?.profile.resumeText,
+        githubSummary: session?.profile.githubSummary,
       },
       opportunity,
     );

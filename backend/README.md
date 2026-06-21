@@ -1,6 +1,6 @@
 # OpportunityAgent — Backend
 
-Express API on port **3001**. Uses `@cursor/sdk` for profile analysis and cover letters.
+Express API on port **3001**. Uses the **Google Gemini API** (via native `fetch`, no SDK) for profile analysis and cover letters.
 
 **Project docs:** [../README.md](../README.md) · [../SYSTEM.md](../SYSTEM.md) · [../BACKEND.md](../BACKEND.md)
 
@@ -8,7 +8,7 @@ Express API on port **3001**. Uses `@cursor/sdk` for profile analysis and cover 
 
 ```bash
 cp .env.example .env
-# Set CURSOR_API_KEY in .env
+# Set GEMINI_API_KEY in .env (get one at https://aistudio.google.com/apikey)
 npm install
 npm run dev
 ```

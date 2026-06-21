@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { analyzeProfileWithAgent } from '../services/cursorAgent.js';
+import { analyzeProfileWithAgent } from '../services/geminiAgent.js';
 import { fetchGitHubProfileSummary } from '../services/github.js';
 import { extractResumeText } from '../services/resumeParser.js';
 import { createSession, type ProfileInput } from '../store/session.js';
@@ -115,13 +115,13 @@ profileRouter.post(
       }
       if (
         err instanceof Error &&
-        (err.message.includes('CURSOR_API_KEY') ||
-          err.message.includes('Agent') ||
-          err.name === 'CursorAgentError')
+        (err.message.includes('GEMINI_API_KEY') ||
+          err.message.includes('Gemini') ||
+          err.message.includes('timed out'))
       ) {
         res.status(503).json({
           message: err.message || 'AI agent unavailable',
-          code: err.message.includes('CURSOR_API_KEY')
+          code: err.message.includes('GEMINI_API_KEY')
             ? 'AGENT_NOT_CONFIGURED'
             : 'AGENT_STARTUP_FAILED',
         });
