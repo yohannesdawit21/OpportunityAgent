@@ -56,16 +56,20 @@ for (const target of ['production', 'preview', 'development']) {
     ['--yes', 'vercel@latest', 'env', 'rm', ENV_KEY, target, '--yes'],
     { cwd: root, stdio: 'inherit' },
   );
-  run([
+  const args = [
     'env',
     'add',
     ENV_KEY,
     target,
     '--value',
     key,
-    '--sensitive',
     '--yes',
-  ]);
+  ];
+  // --sensitive not allowed on development environment
+  if (target !== 'development') {
+    args.push('--sensitive');
+  }
+  run(args);
 }
 
 console.log('\nDone. Redeploy on Vercel, then verify:');
