@@ -28,6 +28,16 @@ function modelChain(): string[] {
 
 const GROQ_TIMEOUT_MS = 60_000;
 
+/**
+ * Groq's free tier counts prompt + max_tokens against one per-minute token budget
+ * (12k TPM for llama-3.3-70b). Keep requests comfortably under it by bounding both
+ * the context we send and the completion we reserve.
+ */
+const MAX_RESUME_CHARS = 14_000;
+const MAX_GITHUB_SUMMARY_CHARS = 4_000;
+const ANALYZE_MAX_TOKENS = 3_500;
+const COVER_LETTER_MAX_TOKENS = 1_024;
+
 export function assertAgentConfigured(): void {
   if (apiKey() || useFallback()) return;
   throw new Error(
@@ -117,7 +127,7 @@ function isModelUnavailable(status: number, body: GroqResponse): boolean {
 async function callGroq(
   model: string,
   prompt: string,
-  json: boolean,
+  opts: { json: boolean; maxTokens: number },
 ): Promise<{ text: string } | { retryable: string } | { fatal: string }> {
   const key = apiKey();
   if (!key) throw new Error('GROQ_API_KEY is not set');
@@ -137,8 +147,8 @@ async function callGroq(
         model,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.7,
-        max_tokens: 4096,
-        ...(json ? { response_format: { type: 'json_object' } } : {}),
+        max_tokens: opts.maxTokens,
+        ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
       }),
     });
 
@@ -147,6 +157,15 @@ async function callGroq(
     if (!res.ok) {
       if (isModelUnavailable(res.status, data)) {
         return { retryable: `Model "${model}" is not available for this API key` };
+      }
+      // Prompt + max_tokens exceeds the per-minute token budget. Fallback models have
+      // lower limits, so falling through won't help — fail with an actionable message.
+      if (res.status === 413 || data.error?.code === 'request_too_large') {
+        return {
+          fatal:
+            'Groq request exceeded the free-tier token-per-minute limit. Try a shorter resume, ' +
+            'or upgrade your Groq plan at https://console.groq.com/settings/billing.',
+        };
       }
       // Rate limits are per-model on Groq — try the next model rather than giving up.
       if (res.status === 429) {
@@ -164,7 +183,10 @@ async function callGroq(
   }
 }
 
-async function runPrompt(prompt: string, opts: { json: boolean }): Promise<string> {
+async function runPrompt(
+  prompt: string,
+  opts: { json: boolean; maxTokens: number },
+): Promise<string> {
   const key = apiKey();
   if (!key) {
     throw new Error('GROQ_API_KEY is not set');
@@ -177,7 +199,7 @@ async function runPrompt(prompt: string, opts: { json: boolean }): Promise<strin
     console.log(`[groq-agent] starting run (model=${model})…`);
     let outcome;
     try {
-      outcome = await callGroq(model, prompt, opts.json);
+      outcome = await callGroq(model, prompt, opts);
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         lastError = `Groq request timed out after ${GROQ_TIMEOUT_MS / 1000}s`;
@@ -323,17 +345,19 @@ async function buildEnrichedContext(profile: ProfileInput): Promise<string> {
     ? profile.githubSummary ?? (await fetchGitHubProfileSummary(profile.github))
     : '';
 
+  // Bound the context so prompt + max_tokens stays under Groq's per-minute budget.
+  const trimmedGithub = (githubSummary ?? '').slice(0, MAX_GITHUB_SUMMARY_CHARS);
+  const trimmedResume = profile.resumeText?.slice(0, MAX_RESUME_CHARS) ?? '';
+
   const blocks = [
     `Candidate name: ${profile.name}`,
     profile.github ? `GitHub URL: ${profile.github}` : '',
-    githubSummary ? `\n--- GitHub analysis ---\n${githubSummary}` : '',
+    trimmedGithub ? `\n--- GitHub analysis ---\n${trimmedGithub}` : '',
     profile.linkedin ? `LinkedIn / portfolio: ${profile.linkedin}` : '',
     profile.resumeUploaded
       ? `Resume file: ${profile.resumeFileName ?? 'uploaded'}`
       : 'No resume file uploaded',
-    profile.resumeText
-      ? `\n--- Resume / CV text ---\n${profile.resumeText}`
-      : '',
+    trimmedResume ? `\n--- Resume / CV text ---\n${trimmedResume}` : '',
   ].filter(Boolean);
 
   return blocks.join('\n');
@@ -424,7 +448,7 @@ Respond with ONLY valid JSON (no markdown outside JSON) in exactly this shape:
 }`;
 
   try {
-    const raw = await runPrompt(prompt, { json: true });
+    const raw = await runPrompt(prompt, { json: true, maxTokens: ANALYZE_MAX_TOKENS });
     const parsed = extractJsonPayload<AgentAnalysisPayload>(raw);
 
     if (!parsed?.skillTags?.length || !parsed.opportunities?.length) {
@@ -493,7 +517,7 @@ Match rationale: ${opportunity.rationale}
 Respond with ONLY the cover letter text (no JSON, no markdown fences).`;
 
   try {
-    const letter = await runPrompt(prompt, { json: false });
+    const letter = await runPrompt(prompt, { json: false, maxTokens: COVER_LETTER_MAX_TOKENS });
     if (letter.length > 80) return letter;
   } catch (err) {
     console.warn('[groq-agent] cover letter fallback:', err);
