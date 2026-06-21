@@ -43,8 +43,11 @@ function run(args) {
 
 const key = parseKey(envPath);
 
-console.log('Linking project (if needed)…');
-run(['link', '--yes']);
+// Skip link step if .vercel/repo.json exists (project already linked)
+if (!existsSync(path.join(root, '.vercel', 'repo.json'))) {
+  console.log('Linking project (if needed)…');
+  run(['link', '--yes']);
+}
 
 for (const target of ['production', 'preview', 'development']) {
   console.log(`Setting ${ENV_KEY} for ${target}…`);
