@@ -11,7 +11,7 @@ export interface AnalyzeProfileResponse {
   aiStrengths: string[];
   rolesScanned: number;
   opportunities: Opportunity[];
-  /** `agent` = Gemini API; `fallback` = static seed (dev only) */
+  /** `agent` = Groq API; `fallback` = static seed (dev only) */
   source?: 'agent' | 'fallback';
 }
 

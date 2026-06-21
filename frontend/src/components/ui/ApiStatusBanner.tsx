@@ -103,7 +103,7 @@ export function ApiStatusBanner() {
       >
         <Icon name="warning" className="text-amber-400" />
         <span className="min-w-0 flex-1">
-          <strong className="font-semibold">GEMINI_API_KEY missing on Vercel.</strong>{' '}
+          <strong className="font-semibold">GROQ_API_KEY missing on Vercel.</strong>{' '}
           Add it in Project → Settings → Environment Variables (Production), redeploy, then
           analyze again. Localhost works because the key is in{' '}
           <code className="rounded bg-black/30 px-1">backend/.env</code> only — that file is not
@@ -127,7 +127,7 @@ export function ApiStatusBanner() {
     >
       <Icon name="cloud_done" className="text-tertiary" />
       <span>
-        <strong className="font-semibold">Live API</strong> — Gemini AI connected
+        <strong className="font-semibold">Live API</strong> — Groq AI connected
       </span>
     </Banner>
   );

@@ -222,4 +222,4 @@ Access-Control-Allow-Headers: Content-Type, Authorization
 - [x] Error bodies use `{ message, code? }`
 - [x] File upload size limit (e.g. 10 MB) enforced
 
-Implementation lives in `backend/` (Express + Google Gemini API via native `fetch`). Run `npm run dev:backend` and set `GEMINI_API_KEY` in `backend/.env`.
+Implementation lives in `backend/` (Express + Groq API via native `fetch`). Run `npm run dev:backend` and set `GROQ_API_KEY` in `backend/.env`.

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { resolveSession } from '../middleware/session.js';
-import { generateCoverLetterWithAgent } from '../services/geminiAgent.js';
+import { generateCoverLetterWithAgent } from '../services/groqAgent.js';
 import type { Opportunity } from '../data/opportunities.js';
 
 export const opportunitiesRouter = Router();

@@ -15,20 +15,20 @@ flowchart LR
   end
   subgraph server [Node server]
     API[Express API\nlocalhost:3001]
-    Agent[Gemini service]
+    Agent[Groq service]
     Store[(In-memory sessions)]
   end
   UI -->|HTTP /api/*| API
   API --> Agent
   API --> Store
-  Agent -->|LLM| Gemini[Google Gemini API]
+  Agent -->|LLM| Groq[Groq API]
 ```
 
 | Layer | Folder | Role |
 |-------|--------|------|
 | **Presentation** | `frontend/` | Pages, layout, forms, mock fallback |
 | **API** | `backend/` | REST routes, file upload, session storage |
-| **AI** | `backend/src/services/geminiAgent.ts` | Prompts + JSON parsing for agent output |
+| **AI** | `backend/src/services/groqAgent.ts` | Prompts + JSON parsing for agent output |
 | **Contracts** | `BACKEND.md` | Shared API shape between UI and server |
 
 In development, Vite **proxies** `/api` → `http://localhost:3001`, so the browser always calls same-origin `/api/...`.
@@ -42,7 +42,7 @@ sequenceDiagram
   participant U as User
   participant F as Frontend
   participant B as Backend
-  participant A as Gemini API
+  participant A as Groq API
 
   U->>F: Onboarding: name, GitHub, resume
   F->>F: analysisStatus = running
@@ -113,7 +113,7 @@ Controlled by `VITE_USE_MOCK_API`:
 | Mode | `VITE_USE_MOCK_API` | Behavior |
 |------|---------------------|----------|
 | **Mock** | `true` (or unset in old `.env`) | `frontend/src/api/mock/handlers.ts` — fixed seed jobs, ~3s delay |
-| **Live** | `false` | `fetch` to `/api/*` → Express → Gemini API |
+| **Live** | `false` | `fetch` to `/api/*` → Express → Groq API |
 
 UI indicators:
 
@@ -140,7 +140,7 @@ backend/src/
 │   opportunities.ts         # GET list, POST cover-letter
 │   applications.ts          # PUT draft, POST submit
 ├── services/
-│   geminiAgent.ts           # Gemini REST prompts & JSON extraction
+│   groqAgent.ts             # Groq REST prompts & JSON extraction
 │   github.ts                # Public GitHub profile summary
 │   resumeParser.ts          # PDF/text extraction for uploads
 ├── store/session.ts         # In-memory session per sess_*
@@ -156,7 +156,7 @@ backend/src/
 5. **Session:** `createSession({ sessionId, profile, opportunities, … })`.
 6. Response matches `AnalyzeProfileResponse` in `BACKEND.md`.
 
-If `GEMINI_API_KEY` is missing and `USE_AGENT_FALLBACK=true`, server returns deterministic seed data instead of calling the agent.
+If `GROQ_API_KEY` is missing and `USE_AGENT_FALLBACK=true`, server returns deterministic seed data instead of calling the agent.
 
 ### Session model
 
@@ -170,7 +170,7 @@ If `GEMINI_API_KEY` is missing and `USE_AGENT_FALLBACK=true`, server returns det
 
 | Integration | Where | Notes |
 |-------------|-------|-------|
-| **Google Gemini API** | `geminiAgent.ts` | See [§8 Implementing the Gemini API](#8-implementing-the-gemini-api) |
+| **Groq API** | `groqAgent.ts` | See [§8 Implementing the Groq API](#8-implementing-the-groq-api) |
 | **GitHub API** | `github.ts` | Public profile/repos for analyze context |
 | **Resume upload** | `profile.ts` + `resumeParser.ts` | PDF/DOC/DOCX, max 10 MB |
 | **Vite proxy** | `frontend/vite.config.ts` | `/api` → `localhost:3001` |
@@ -196,7 +196,7 @@ stateDiagram-v2
 
 | Item | Practice |
 |------|----------|
-| `GEMINI_API_KEY` | Only in `backend/.env` (gitignored); sent only as the `x-goog-api-key` header server-side |
+| `GROQ_API_KEY` | Only in `backend/.env` (gitignored); sent only as the `Authorization: Bearer` header server-side |
 | `frontend/.env` | No secrets; only `VITE_*` public vars |
 | CORS | Allows `localhost:5173` and preview port |
 
@@ -204,22 +204,22 @@ Never commit `.env` files. Judges must supply their own API key.
 
 ---
 
-## 8. Implementing the Gemini API
+## 8. Implementing the Groq API
 
-This project calls the **Google Gemini REST API** directly with the built-in `fetch` — **no SDK dependency** — on the **backend only**. The React app never sees `GEMINI_API_KEY`; it only calls your Express REST API.
+This project calls the **Groq API** (OpenAI-compatible chat completions) directly with the built-in `fetch` — **no SDK dependency** — on the **backend only**. The React app never sees `GROQ_API_KEY`; it only calls your Express REST API.
 
 ### 8.1 Configure
 
 **Environment** (`backend/.env`):
 
 ```env
-GEMINI_API_KEY=your_key_from_aistudio
-GEMINI_MODEL=gemini-2.0-flash   # optional; falls back automatically if unavailable
-USE_AGENT_FALLBACK=false        # true = skip the API, return seed jobs
+GROQ_API_KEY=your_key_from_groq_console
+GROQ_MODEL=llama-3.3-70b-versatile   # optional; falls back automatically if unavailable
+USE_AGENT_FALLBACK=false             # true = skip the API, return seed jobs
 PORT=3001
 ```
 
-Get a free key from [Google AI Studio](https://aistudio.google.com/apikey). The health endpoint reports whether a usable key is present (placeholder values count as absent):
+Get a free key from the [Groq Console](https://console.groq.com/keys). The health endpoint reports whether a usable key is present (placeholder values count as absent):
 
 ```bash
 curl http://localhost:3001/api/health
@@ -228,36 +228,33 @@ curl http://localhost:3001/api/health
 
 ### 8.2 Core pattern: `runPrompt`
 
-All AI work goes through one helper in `backend/src/services/geminiAgent.ts`. It POSTs to the Generative Language API and reads back the candidate text:
+All AI work goes through one helper in `backend/src/services/groqAgent.ts`. It POSTs to the chat-completions endpoint and reads back the assistant message:
 
 ```typescript
-const res = await fetch(
-  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-  {
-    method: 'POST',
-    signal: controller.signal,                 // AbortController → 60s timeout
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        responseMimeType: json ? 'application/json' : 'text/plain',
-      },
-    }),
-  },
-);
+const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  method: 'POST',
+  signal: controller.signal,                 // AbortController → 60s timeout
+  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+  body: JSON.stringify({
+    model,
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.7,
+    max_tokens: 4096,
+    ...(json ? { response_format: { type: 'json_object' } } : {}),
+  }),
+});
 const data = await res.json();
-const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text).join('');
+const text = data.choices?.[0]?.message?.content ?? '';
 ```
 
 | Detail | Purpose in this app |
 |--------|---------------------|
-| `x-goog-api-key` header | Authenticates server-side; key never appears in a URL/log |
-| `responseMimeType: application/json` | Forces clean JSON for the analyze call → reliable parsing |
+| `Authorization: Bearer` header | Authenticates server-side; key never appears in a URL/log |
+| `response_format: json_object` | Forces clean JSON for the analyze call → reliable parsing (requires "json" in the prompt) |
 | `AbortController` (60s) | Bounds the request so a stuck call can't hang the HTTP response |
-| Model fallback chain | `GEMINI_MODEL` → `gemini-2.5-flash` → `gemini-2.0-flash` → `gemini-1.5-flash`; a `404/NOT_FOUND` falls through to the next |
+| Model fallback chain | `GROQ_MODEL` → `openai/gpt-oss-120b` → `llama-3.1-8b-instant`; a `404`/decommissioned **or a `429` rate limit** falls through to the next (Groq limits are per-model) |
 
-Profile analyze is typically **10–40 seconds**; the frontend scanning UI covers that wait.
+Profile analyze is typically **2–15 seconds**; the frontend scanning UI covers that wait.
 
 ### 8.3 Where the API is called
 
@@ -267,10 +264,10 @@ flowchart TB
     P[POST /api/profile/analyze]
     C[POST /api/opportunities/:id/cover-letter]
   end
-  subgraph geminiAgent [geminiAgent.ts]
+  subgraph groqAgent [groqAgent.ts]
     A[analyzeProfileWithAgent]
     G[generateCoverLetterWithAgent]
-    R[runPrompt → fetch generateContent]
+    R[runPrompt → fetch chat/completions]
   end
   P --> A --> R
   C --> G --> R
@@ -285,18 +282,18 @@ flowchart TB
 
 ### 8.4 Prompt design
 
-**Profile analysis** — one large prompt asks for **only JSON** with a fixed schema (skills, strengths, 4–6 jobs, cover letters, roadmaps), sent with `responseMimeType: application/json`. Candidate context is built in `buildEnrichedContext()`:
+**Profile analysis** — one large prompt asks for **only JSON** with a fixed schema (skills, strengths, 4–6 jobs, cover letters, roadmaps), sent with `response_format: { type: 'json_object' }`. Candidate context is built in `buildEnrichedContext()`:
 
 - Name, GitHub URL, LinkedIn  
 - GitHub repo summary (REST)  
 - Resume text (PDF/DOC extract)
 
-**Cover letter** — separate prompt with candidate excerpt + job title/company/rationale; response is **plain text** (`text/plain`).
+**Cover letter** — separate prompt with candidate excerpt + job title/company/rationale; response is **plain text** (no `response_format`).
 
 Tips that work well here:
 
 1. **Be explicit about output shape** — include a JSON example in the prompt.  
-2. **Use `responseMimeType: application/json`** for structured responses.  
+2. **Use `response_format: { type: 'json_object' }`** for structured responses (keep the word "json" in the prompt).  
 3. **Keep instructions task-focused**, not chatty.  
 4. **Cap size** — resume excerpt truncated (~8–12k chars); cover letter prompt uses ~2500 chars of resume.
 
@@ -314,9 +311,9 @@ For cover letters, the raw string is used if length > 80 characters; otherwise t
 
 | Condition | Behavior |
 |-----------|----------|
-| No usable `GEMINI_API_KEY` and `USE_AGENT_FALLBACK` not forced | `analyze` throws → route returns `503 AGENT_NOT_CONFIGURED` |
+| No usable `GROQ_API_KEY` and `USE_AGENT_FALLBACK` not forced | `analyze` throws → route returns `503 AGENT_NOT_CONFIGURED` |
 | `USE_AGENT_FALLBACK=true` | `seedFallback()` — static jobs from `backend/src/data/opportunities.ts` |
-| API error or invalid JSON | `analyzeProfileWithAgent` catches, logs `[gemini-agent]`, returns `seedFallback()` (when fallback enabled) or rethrows |
+| API error or invalid JSON | `analyzeProfileWithAgent` catches, logs `[groq-agent]`, returns `seedFallback()` (when fallback enabled) or rethrows |
 
 For hackathon demos, prefer a valid API key and `USE_AGENT_FALLBACK=false` so judges see real output.
 
@@ -325,14 +322,14 @@ For hackathon demos, prefer a valid API key and `USE_AGENT_FALLBACK=false` so ju
 Example: “explain why this job matches” endpoint.
 
 1. **Route** — `backend/src/routes/opportunities.ts` → `POST /api/opportunities/:id/explain`
-2. **Service** — `explainMatchWithAgent(profile, opportunity)` in `geminiAgent.ts`:
+2. **Service** — `explainMatchWithAgent(profile, opportunity)` in `groqAgent.ts`:
    - Build a short prompt with profile + job fields.  
    - `const text = await runPrompt(prompt, { json: false });`  
    - Return `{ explanation: text }`.
 3. **Frontend** — add `apiRequest` in `frontend/src/api/opportunityAgentApi.ts` and call from a button in `OpportunityCard.tsx`.
 4. **Contract** — document request/response in `BACKEND.md`.
 
-Do **not** call Gemini from the frontend; keep all AI calls server-side.
+Do **not** call Groq from the frontend; keep all AI calls server-side.
 
 ### 8.8 Local vs production
 
@@ -346,13 +343,14 @@ Do **not** call Gemini from the frontend; keep all AI calls server-side.
 
 | Symptom | Check |
 |---------|--------|
-| `GEMINI_API_KEY is not set` | `backend/.env` loaded; key isn't the `.env.example` placeholder |
-| Analyze always shows Lumina/Nebula seed jobs | Fallback path — inspect server logs for `[gemini-agent]` warnings; check `/api/health` `"agent"` |
-| `Model "…" is not available` | Your key/region lacks that model — set `GEMINI_MODEL` to one you can access (e.g. `gemini-1.5-flash`) |
-| Request times out | Bounded at 60s; check network egress to `generativelanguage.googleapis.com` |
+| `GROQ_API_KEY is not set` | `backend/.env` loaded; key isn't the `.env.example` placeholder |
+| Analyze always shows Lumina/Nebula seed jobs | Fallback path — inspect server logs for `[groq-agent]` warnings; check `/api/health` `"agent"` |
+| `Model "…" is not available` | Your key lacks that model — set `GROQ_MODEL` to a current one (e.g. `llama-3.1-8b-instant`) |
+| `Model "…" is rate limited` | Per-model limit hit; the chain falls through automatically, or set `GROQ_MODEL` to a less-used model |
+| Request times out | Bounded at 60s; check network egress to `api.groq.com` |
 | Invalid JSON | Log the raw `runPrompt` output; tighten prompt or improve `extractJsonPayload` |
 
-Official docs: [Gemini API on Google AI for Developers](https://ai.google.dev/gemini-api/docs).
+Official docs: [Groq API reference](https://console.groq.com/docs).
 
 ---
 

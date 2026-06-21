@@ -6,10 +6,10 @@ const port = Number(process.env.PORT ?? 3001);
 const server = app.listen(port, () => {
   console.log(`OpportunityAgent API listening on http://localhost:${port}/api`);
   console.log(
-    `Gemini agent: ${
-      process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim()
+    `Groq agent: ${
+      process.env.GROQ_API_KEY?.trim()
         ? 'enabled'
-        : 'disabled (set GEMINI_API_KEY or USE_AGENT_FALLBACK=true)'
+        : 'disabled (set GROQ_API_KEY or USE_AGENT_FALLBACK=true)'
     }`,
   );
 });

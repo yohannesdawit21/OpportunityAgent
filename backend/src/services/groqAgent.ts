@@ -7,25 +7,31 @@ import {
   SEED_OPPORTUNITIES,
 } from '../data/opportunities.js';
 import { fetchGitHubProfileSummary } from './github.js';
-import { getGeminiApiKey } from '../loadEnv.js';
+import { getGroqApiKey } from '../loadEnv.js';
 import type { ProfileInput } from '../store/session.js';
 
-const apiKey = () => getGeminiApiKey();
+const apiKey = () => getGroqApiKey();
 const useFallback = () => process.env.USE_AGENT_FALLBACK === 'true';
 
-/** Ordered list of models to try. First success wins; a 404/NOT_FOUND falls through to the next. */
+const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+
+/**
+ * Ordered list of models to try. First success wins; an unavailable model
+ * (404/decommissioned) OR a rate-limited model (429) falls through to the next —
+ * Groq enforces limits per-model, so a different model may still have headroom.
+ */
 function modelChain(): string[] {
-  const primary = process.env.GEMINI_MODEL?.trim() || 'gemini-2.0-flash';
-  const chain = [primary, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+  const primary = process.env.GROQ_MODEL?.trim() || 'llama-3.3-70b-versatile';
+  const chain = [primary, 'openai/gpt-oss-120b', 'llama-3.1-8b-instant'];
   return [...new Set(chain)];
 }
 
-const GEMINI_TIMEOUT_MS = 60_000;
+const GROQ_TIMEOUT_MS = 60_000;
 
 export function assertAgentConfigured(): void {
   if (apiKey() || useFallback()) return;
   throw new Error(
-    'GEMINI_API_KEY is not set on the server. Add it in Vercel → Settings → Environment Variables, then redeploy.',
+    'GROQ_API_KEY is not set on the server. Add it in Vercel → Settings → Environment Variables, then redeploy.',
   );
 }
 
@@ -37,7 +43,7 @@ const OPPORTUNITY_TYPES: OpportunityType[] = [
   'fellowships',
 ];
 
-/** Defensive normalizer — Gemini usually returns a string, but tolerate candidate-shaped objects too. */
+/** Defensive normalizer — Groq usually returns a string, but tolerate message-shaped objects too. */
 function extractAssistantText(result: unknown): string {
   if (typeof result === 'string') return result;
   if (!result || typeof result !== 'object') return '';
@@ -88,70 +94,70 @@ function extractJsonPayload<T>(text: string): T | null {
   return null;
 }
 
-interface GeminiResponse {
-  candidates?: Array<{
-    content?: { parts?: Array<{ text?: string }> };
-    finishReason?: string;
+interface GroqResponse {
+  choices?: Array<{
+    message?: { role?: string; content?: string };
+    finish_reason?: string;
   }>;
-  promptFeedback?: { blockReason?: string };
-  error?: { code?: number; status?: string; message?: string };
+  error?: { code?: string; type?: string; message?: string };
 }
 
-/** Returns true for "this model id is not available to your key/region" style errors so we can fall through. */
-function isModelNotFound(status: number, body: GeminiResponse): boolean {
+/** True for "this model id is unavailable/decommissioned" errors so we can fall through to the next model. */
+function isModelUnavailable(status: number, body: GroqResponse): boolean {
   if (status === 404) return true;
-  const apiStatus = body.error?.status ?? '';
+  const code = body.error?.code ?? '';
   const message = body.error?.message ?? '';
-  return apiStatus === 'NOT_FOUND' || /is not found|not supported|does not exist/i.test(message);
+  return (
+    code === 'model_not_found' ||
+    code === 'model_decommissioned' ||
+    /not found|does not exist|decommissioned|not supported/i.test(message)
+  );
 }
 
-async function callGemini(
+async function callGroq(
   model: string,
   prompt: string,
   json: boolean,
-): Promise<{ text: string } | { retryable: true } | { fatal: string }> {
+): Promise<{ text: string } | { retryable: string } | { fatal: string }> {
   const key = apiKey();
-  if (!key) throw new Error('GEMINI_API_KEY is not set');
+  if (!key) throw new Error('GROQ_API_KEY is not set');
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS);
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: 'POST',
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': key,
-        },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 4096,
-            responseMimeType: json ? 'application/json' : 'text/plain',
-          },
-        }),
+    const res = await fetch(GROQ_ENDPOINT, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
       },
-    );
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+        max_tokens: 4096,
+        ...(json ? { response_format: { type: 'json_object' } } : {}),
+      }),
+    });
 
-    const data = (await res.json().catch(() => ({}))) as GeminiResponse;
+    const data = (await res.json().catch(() => ({}))) as GroqResponse;
 
     if (!res.ok) {
-      if (isModelNotFound(res.status, data)) return { retryable: true };
+      if (isModelUnavailable(res.status, data)) {
+        return { retryable: `Model "${model}" is not available for this API key` };
+      }
+      // Rate limits are per-model on Groq — try the next model rather than giving up.
+      if (res.status === 429) {
+        return { retryable: `Model "${model}" is rate limited` };
+      }
       const reason = data.error?.message || `HTTP ${res.status}`;
-      return { fatal: `Gemini request failed: ${reason}` };
+      return { fatal: `Groq request failed: ${reason}` };
     }
 
-    if (data.promptFeedback?.blockReason) {
-      return { fatal: `Gemini blocked the prompt (${data.promptFeedback.blockReason})` };
-    }
-
-    const parts = data.candidates?.[0]?.content?.parts ?? [];
-    const text = parts.map((p) => p.text ?? '').join('').trim();
-    if (!text) return { fatal: 'Gemini returned an empty response' };
+    const text = (data.choices?.[0]?.message?.content ?? '').trim();
+    if (!text) return { fatal: 'Groq returned an empty response' };
     return { text };
   } finally {
     clearTimeout(timer);
@@ -161,35 +167,35 @@ async function callGemini(
 async function runPrompt(prompt: string, opts: { json: boolean }): Promise<string> {
   const key = apiKey();
   if (!key) {
-    throw new Error('GEMINI_API_KEY is not set');
+    throw new Error('GROQ_API_KEY is not set');
   }
 
   const models = modelChain();
-  let lastError = 'Gemini request failed';
+  let lastError = 'Groq request failed';
 
   for (const model of models) {
-    console.log(`[gemini-agent] starting run (model=${model})…`);
+    console.log(`[groq-agent] starting run (model=${model})…`);
     let outcome;
     try {
-      outcome = await callGemini(model, prompt, opts.json);
+      outcome = await callGroq(model, prompt, opts.json);
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
-        lastError = `Gemini request timed out after ${GEMINI_TIMEOUT_MS / 1000}s`;
+        lastError = `Groq request timed out after ${GROQ_TIMEOUT_MS / 1000}s`;
         continue;
       }
       throw err;
     }
 
     if ('text' in outcome) {
-      console.log(`[gemini-agent] run finished (model=${model})`);
+      console.log(`[groq-agent] run finished (model=${model})`);
       return extractAssistantText(outcome.text).trim();
     }
     if ('retryable' in outcome) {
-      console.warn(`[gemini-agent] model "${model}" unavailable, trying next…`);
-      lastError = `Model "${model}" is not available for this API key`;
+      console.warn(`[groq-agent] ${outcome.retryable}, trying next…`);
+      lastError = outcome.retryable;
       continue;
     }
-    // fatal — auth, quota, safety: no point trying other models
+    // fatal — auth, bad request: no point trying other models
     throw new Error(outcome.fatal);
   }
 
@@ -422,7 +428,7 @@ Respond with ONLY valid JSON (no markdown outside JSON) in exactly this shape:
     const parsed = extractJsonPayload<AgentAnalysisPayload>(raw);
 
     if (!parsed?.skillTags?.length || !parsed.opportunities?.length) {
-      console.warn('[gemini-agent] invalid agent JSON shape');
+      console.warn('[groq-agent] invalid agent JSON shape');
       throw new Error('Incomplete agent response');
     }
 
@@ -447,13 +453,13 @@ Respond with ONLY valid JSON (no markdown outside JSON) in exactly this shape:
       source: 'agent',
     };
   } catch (err) {
-    console.warn('[gemini-agent] full analyze failed:', err);
+    console.warn('[groq-agent] full analyze failed:', err);
     if (useFallback()) {
       return { ...seedFallback(profile.name), source: 'fallback' };
     }
     throw err instanceof Error
       ? err
-      : new Error('Gemini analysis failed');
+      : new Error('Groq analysis failed');
   }
 }
 
@@ -490,7 +496,7 @@ Respond with ONLY the cover letter text (no JSON, no markdown fences).`;
     const letter = await runPrompt(prompt, { json: false });
     if (letter.length > 80) return letter;
   } catch (err) {
-    console.warn('[gemini-agent] cover letter fallback:', err);
+    console.warn('[groq-agent] cover letter fallback:', err);
   }
 
   return opportunity.coverLetter;

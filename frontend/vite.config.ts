@@ -19,7 +19,7 @@ export default defineConfig({
       '/api': {
         target: 'http://127.0.0.1:3001',
         changeOrigin: true,
-        // Generous timeout for AI analyze (Gemini is typically 10–40s)
+        // Generous timeout for AI analyze (Groq is typically 2–15s)
         timeout: 180_000,
         proxyTimeout: 180_000,
       },

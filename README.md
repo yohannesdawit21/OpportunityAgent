@@ -1,6 +1,6 @@
 # OpportunityAgent
 
-**AI career assistant** for a virtual hackathon: upload a profile, get AI-matched roles, and apply with a guided helper. Built with React, Express, and the Google Gemini API.
+**AI career assistant** for a virtual hackathon: upload a profile, get AI-matched roles, and apply with a guided helper. Built with React, Express, and the Groq API.
 
 ---
 
@@ -25,7 +25,7 @@ virtual hackaton/
 ├── SUBMISSION.md       ← judge checklist & demo script
 ├── BACKEND.md          ← REST API contract
 ├── frontend/           ← React + Vite UI
-└── backend/            ← Express API + Gemini AI
+└── backend/            ← Express API + Groq AI
 ```
 
 ---
@@ -45,7 +45,7 @@ See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for Vercel **Services** deploy (`experi
 npm install
 
 cd backend && cp .env.example .env
-# Edit .env: set GEMINI_API_KEY (get one at https://aistudio.google.com/apikey)
+# Edit .env: set GROQ_API_KEY (get one at https://console.groq.com/keys)
 
 cd ../frontend && cp .env.example .env
 # Defaults: VITE_USE_MOCK_API=false, VITE_API_URL=/api
@@ -98,8 +98,8 @@ Uses in-browser mock data (~3s fake scan). Good for UI-only testing.
 
 | Variable | Meaning |
 |----------|---------|
-| `GEMINI_API_KEY` | Required for live AI ([get a key](https://aistudio.google.com/apikey)) |
-| `GEMINI_MODEL` | Optional; default `gemini-2.0-flash` |
+| `GROQ_API_KEY` | Required for live AI ([get a key](https://console.groq.com/keys)) |
+| `GROQ_MODEL` | Optional; default `llama-3.3-70b-versatile` |
 | `PORT` | Default `3001` |
 | `USE_AGENT_FALLBACK` | `true` = deterministic seed data if no API key |
 
@@ -145,7 +145,7 @@ Uses in-browser mock data (~3s fake scan). Good for UI-only testing.
 
 - **Frontend:** React 19, TypeScript, Vite 6, Tailwind CSS v4, React Router v7
 - **Backend:** Express 5, Multer, native `fetch` (no AI SDK dependency)
-- **AI:** Google Gemini (`gemini-2.0-flash`) for profile analysis, job matching, cover letters
+- **AI:** Groq (`llama-3.3-70b-versatile`) for profile analysis, job matching, cover letters
 
 ---
 

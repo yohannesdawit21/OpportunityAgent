@@ -5,7 +5,7 @@
 ## Architecture (short)
 
 - **Frontend** (`frontend/`) — React + Vite, calls REST API
-- **Backend** (`backend/`) — Express on port 3001, Google Gemini API for AI
+- **Backend** (`backend/`) — Express on port 3001, Groq API for AI
 - **Integration** — Vite proxies `/api` → `http://localhost:3001`
 
 ## Pre-flight (before judges open the app)
@@ -13,7 +13,7 @@
 ```bash
 # From repo root
 npm install
-cd backend && cp .env.example .env   # add GEMINI_API_KEY
+cd backend && cp .env.example .env   # add GROQ_API_KEY
 cd ../frontend && cp .env.example .env
 cd ..
 npm run build          # must pass with no errors
@@ -31,7 +31,7 @@ Open http://localhost:5173/
 1. Confirm **green “Live API”** banner on onboarding (not amber “Mock API”).
 2. Header badge shows **Live API** (not Mock / Offline).
 3. Enter name + GitHub URL → **Analyze Profile** (do **not** use “Jump to any screen” demo buttons).
-4. After scan (~10–40s), dashboard shows **new companies/roles** tailored to the candidate (not Lumina/Nebula seed cards unless agent fallback ran).
+4. After scan (~2–15s), dashboard shows **new companies/roles** tailored to the candidate (not Lumina/Nebula seed cards unless agent fallback ran).
 5. Skills and rationales reference the candidate’s **GitHub repos** and **CV text**.
 6. Profile page shows **Live backend** and a `sess_…` session id.
 
@@ -40,7 +40,7 @@ Open http://localhost:5173/
 | File | Key settings |
 |------|----------------|
 | `frontend/.env` | `VITE_USE_MOCK_API=false`, `VITE_API_URL=/api` |
-| `backend/.env` | `GEMINI_API_KEY=…`, `PORT=3001` |
+| `backend/.env` | `GROQ_API_KEY=…`, `PORT=3001` |
 
 ## API smoke test
 
@@ -63,7 +63,7 @@ curl -X POST http://localhost:3001/api/profile/analyze \
 
 | Action | Data source |
 |--------|-------------|
-| Analyze Profile | Backend + Gemini API |
-| Regenerate cover letter | Backend + Gemini API |
+| Analyze Profile | Backend + Groq API |
+| Regenerate cover letter | Backend + Groq API |
 | Save draft / Submit | Backend |
 | “Jump to any screen (demo)” | Frontend seed data only |

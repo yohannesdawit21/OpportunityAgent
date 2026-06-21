@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Push GEMINI_API_KEY from backend/.env to the linked Vercel project.
+ * Push GROQ_API_KEY from backend/.env to the linked Vercel project.
  * Usage: npm run vercel:sync-env
  */
 import { spawnSync } from 'node:child_process';
@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const envPath = path.join(root, 'backend', '.env');
-const ENV_KEY = 'GEMINI_API_KEY';
+const ENV_KEY = 'GROQ_API_KEY';
 
 function parseKey(file) {
   if (!existsSync(file)) {
@@ -25,7 +25,7 @@ function parseKey(file) {
     process.exit(1);
   }
   const value = line.replace(new RegExp(`^\\s*${ENV_KEY}\\s*=\\s*`), '').trim();
-  if (!value || value === 'your_gemini_api_key_here') {
+  if (!value || value === 'your_groq_api_key_here') {
     console.error(`Set a real ${ENV_KEY} in backend/.env first.`);
     process.exit(1);
   }
