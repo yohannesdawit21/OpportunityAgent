@@ -16,6 +16,18 @@
 
 ---
 
+## Screenshots
+
+**Live opportunity scan** — the AI agent parses your CV, GitHub, and LinkedIn:
+
+![AI scan in progress](docs/screenshots/scanning.png)
+
+**Matched dashboard** — AI-ranked roles with rationale and one-click cover letters:
+
+![Matched opportunities dashboard](docs/screenshots/dashboard.png)
+
+---
+
 ## Repository layout
 
 ```
